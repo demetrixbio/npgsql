@@ -959,7 +959,7 @@ namespace Npgsql
         }
 
         [CanBeNull]
-        IBackendMessage ParseServerMessage(NpgsqlReadBuffer buf, BackendMessageCode code, int len, bool isPrependedMessage)
+        internal IBackendMessage ParseServerMessage(NpgsqlReadBuffer buf, BackendMessageCode code, int len, bool isPrependedMessage)
         {
             switch (code)
             {
@@ -1134,7 +1134,7 @@ namespace Npgsql
         }
 
         internal T ReadExpecting<T>() where T : class, IBackendMessage
-            => ReadExpecting<T>(false).Result;
+            => ReadExpecting<T>(false).GetAwaiter().GetResult();
 
         #endregion Backend message processing
 
