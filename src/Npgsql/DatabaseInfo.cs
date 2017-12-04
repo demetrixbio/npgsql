@@ -174,7 +174,6 @@ ORDER BY typ.typname, att.attnum;
                     Log.Trace($"Array type '{name}' refers to unknown element with OID {elementOID}, skipping", connector.Id);
                     return;
                 }
-
                 var arrayType = new PostgresArrayType(ns, name, oid, elementPostgresType);
                 Add(arrayType);
                 ArrayTypes.Add(arrayType);

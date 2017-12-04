@@ -447,18 +447,69 @@ namespace Npgsql.TypeMapping
 
         #endregion Binding
 
-        internal NpgsqlDbType GetNpgsqlTypeByOid(uint oid)
+        internal (NpgsqlDbType npgsqlDbType, PostgresType postgresType, Type specificType) GetTypeInfoByOid(uint oid)
         {
-            if (!DatabaseInfo.ByOID.TryGetValue(oid, out var pgType))
+            if (!DatabaseInfo.ByOID.TryGetValue(oid, out var postgresType))
                 throw new InvalidOperationException($"Couldn't find PostgreSQL type with OID {oid}");
 
-            if (!Mappings.TryGetValue(pgType.Name, out var mapping) && !Mappings.TryGetValue(pgType.FullName, out mapping))
-                throw new InvalidOperationException($"No mapping found for PostgreSQL type {pgType.DisplayName}");
+            // Try to find the postgresType in the mappings 
+            if (TryGetTypeInfoFromMapping(postgresType, out NpgsqlDbType npgsqlDbType, out Type specificType))
+                return (npgsqlDbType, postgresType, specificType);
 
-            if (!mapping.NpgsqlDbType.HasValue)
-                throw new InvalidOperationException($"Invalid parameter type: {oid}");
+            if (postgresType is PostgresArrayType arrayType)
+            {
+                // Try to find the Elements' postgresType in the mappings 
+                if (TryGetTypeInfoFromMapping(arrayType.Element, out NpgsqlDbType elementType, out Type elementSpecificType))
+                    return (elementType | NpgsqlDbType.Array, postgresType, elementSpecificType);
 
-            return mapping.NpgsqlDbType.Value;
+                // It might be an array of an unmapped enum type
+                if (arrayType.Element is PostgresEnumType)
+                    return (NpgsqlDbType.Array | NpgsqlDbType.Text, postgresType, null);
+            }
+
+            // It might be an unmapped enum type
+            if (postgresType is PostgresEnumType)
+                return (NpgsqlDbType.Text, postgresType, null);
+
+            throw new InvalidOperationException($"No mapping found for PostgreSQL type {postgresType.DisplayName}");
+        }
+
+        private bool TryGetTypeInfoFromMapping(PostgresType pgType, out NpgsqlDbType type, out Type specificType)
+        {
+            if (Mappings.TryGetValue(pgType.Name, out var mapping) || Mappings.TryGetValue(pgType.FullName, out mapping))
+            {
+                if (mapping.NpgsqlDbType.HasValue)
+                {
+                    type = mapping.NpgsqlDbType.Value;
+                    specificType = null;
+                    return true;
+                }
+                var factoryType = mapping.TypeHandlerFactory.GetType();
+#if NETSTANDARD1_3
+                if (factoryType.GetTypeInfo().IsGenericType)
+#else
+                if (factoryType.IsGenericType)
+#endif
+                {
+                    var typeDef = factoryType.GetGenericTypeDefinition();
+                    if (typeDef == typeof(CompositeTypeHandlerFactory<>))
+                    {
+                        type = NpgsqlDbType.Composite;
+                        specificType = mapping.DefaultClrType;
+                        return true;
+                    }
+                    else if (typeDef == typeof(EnumTypeHandlerFactory<>))
+                    {
+                        type = NpgsqlDbType.Enum;
+                        specificType = mapping.DefaultClrType;
+                        return true;
+                    }
+                }
+                throw new InvalidOperationException($"Invalid parameter type: {pgType.OID}");
+            }
+            specificType = null;
+            type = NpgsqlDbType.Unknown;
+            return false;
         }
     }
 }

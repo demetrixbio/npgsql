@@ -248,6 +248,7 @@ namespace Npgsql
             SourceVersion = sourceVersion;
             // ReSharper disable once VirtualMemberCallInConstructor
             Value = value;
+
             DbType = parameterType;
         }
 
