@@ -99,8 +99,11 @@ namespace Npgsql.TypeHandlers
             // We need to treat this as an actual array type, these need special treatment because of
             // typing/generics reasons (there is no way to express "array of X" with generics
             var elementType = t.GetElementType();
-            if (elementType == GetElementFieldType())
-                return (TArray)await ReadAsObject(buf, len, async, fieldDescription);
+            var elementFieldType = GetElementFieldType();
+            if (elementType == elementFieldType)
+                return (TArray)(object)await Read(buf, async, false);
+            if (Nullable.GetUnderlyingType(elementType) == elementFieldType)
+                return (TArray)(object)await Read(buf, async, true);
             if (elementType == GetElementPsvType())
                 return (TArray)await ReadPsvAsObject(buf, len, async, fieldDescription);
             throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
@@ -110,17 +113,29 @@ namespace Npgsql.TypeHandlers
             => ReadAsObject(buf, len, false, fieldDescription).Result;
 
         internal override async ValueTask<object> ReadAsObject(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription)
-            => await Read<TElement>(buf, async);
+            => await Read(buf, async);
 
         public override ValueTask<Array> Read(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription = null)
-            => Read<TElement>(buf, async);
+            => Read(buf, async);
 
-        protected async ValueTask<Array> Read<TElement2>(NpgsqlReadBuffer buf, bool async)
+        internal async ValueTask<Array> Read(NpgsqlReadBuffer buf, bool async, bool? forcedNullability = null)
         {
             await buf.Ensure(12, async);
             var dimensions = buf.ReadInt32();
-            buf.ReadInt32();        // Has nulls. Not populated by PG?
+            bool nullable;
+            if (forcedNullability.HasValue)
+            {
+                // Read and discard HasNulls
+                buf.ReadInt32();
+                nullable = forcedNullability.Value;
+            }
+            else
+            {
+                nullable = Convert.ToBoolean(buf.ReadInt32());
+            }
+
             var elementOID = buf.ReadUInt32();
+            // TODO: Check if the following is stil true after the modifications to allow nullable arrays
             // The following should hold but fails in test CopyTests.ReadBitString
             //Debug.Assert(elementOID == ElementHandler.BackendType.OID);
 
@@ -133,24 +148,19 @@ namespace Npgsql.TypeHandlers
                 buf.ReadInt32(); // We don't care about the lower bounds
             }
 
-            if (dimensions == 0)
-                return new TElement2[0];   // TODO: static instance
+            var result = InitArray(nullable, dimLengths);
 
-            var result = Array.CreateInstance(typeof(TElement2), dimLengths);
+            if (dimensions == 0)
+                return result;
 
             if (dimensions == 1)
-            {
-                var oneDimensional = (TElement2[])result;
-                for (var i = 0; i < oneDimensional.Length; i++)
-                    oneDimensional[i] = await ElementHandler.ReadWithLength<TElement2>(buf, async);
-                return oneDimensional;
-            }
+                return await FillOneDimensional(result, nullable, buf, async);
 
             // Multidimensional
             var indices = new int[dimensions];
             while (true)
             {
-                var element = await ElementHandler.ReadWithLength<TElement2>(buf, async);
+                var element = await ReadElementAsObject(nullable, buf, async);
                 result.SetValue(element, indices);
 
                 // TODO: Overly complicated/inefficient...
@@ -170,6 +180,27 @@ namespace Npgsql.TypeHandlers
             }
         }
 
+
+        protected virtual async ValueTask<Array> FillOneDimensional(Array result, bool nullable, NpgsqlReadBuffer buf, bool async)
+        {
+            var oneDimensional = (TElement[])result;
+            for (var i = 0; i < oneDimensional.Length; i++)
+                oneDimensional[i] = await ElementHandler.ReadWithLength<TElement>(buf, async);
+            return oneDimensional;
+        }
+
+        protected virtual async ValueTask<object> ReadElementAsObject(bool nullable, NpgsqlReadBuffer buf, bool async)
+        {
+            return (object)await ElementHandler.ReadWithLength<TElement>(buf, async);
+        }
+
+        protected virtual Array InitArray(bool nullable, int[] lengths)
+        {
+            if(lengths.Length == 0)
+                return new TElement[0];   // TODO: static instance
+
+            return Array.CreateInstance(typeof(TElement), lengths);
+        }
         #endregion
 
         #region Write
@@ -193,12 +224,12 @@ namespace Npgsql.TypeHandlers
 
             switch (value)
             {
-            case IList<TElement2> asGeneric:
-                return ValidateAndGetLengthGeneric(asGeneric, ref lengthCache);
-            case IList asNonGeneric:
-                return ValidateAndGetLengthNonGeneric(asNonGeneric, ref lengthCache);
-            default:
-                throw new InvalidCastException($"Can't write type {value.GetType()} as an array of {typeof(TElement2)}");
+                case IList<TElement2> asGeneric:
+                    return ValidateAndGetLengthGeneric(asGeneric, ref lengthCache);
+                case IList asNonGeneric:
+                    return ValidateAndGetLengthNonGeneric(asNonGeneric, ref lengthCache);
+                default:
+                    throw new InvalidCastException($"Can't write type {value.GetType()} as an array of {typeof(TElement2)}");
             }
         }
 
@@ -333,6 +364,46 @@ namespace Npgsql.TypeHandlers
 #pragma warning restore CA1061 // Do not hide base class methods
 #pragma warning restore CA1801 // Review unused parameters
 
+    class ValueTypeArrayHandler<TElement> : ArrayHandler<TElement>
+        where TElement : struct
+    {
+        public ValueTypeArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler, int lowerBound) : base(elementHandler, lowerBound) { }
+
+        public ValueTypeArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler) : base(elementHandler) { }
+
+        protected override Array InitArray(bool nullable, int[] lengths)
+        {
+            if (nullable)
+            {
+                if (lengths.Length == 0)
+                    return new TElement?[0];   // TODO: static instance
+
+                return Array.CreateInstance(typeof(TElement?), lengths);
+            }
+            return base.InitArray(nullable, lengths);
+        }
+
+        protected override async ValueTask<Array> FillOneDimensional(Array result, bool nullable, NpgsqlReadBuffer buf, bool async)
+        {
+            if (nullable)
+            {
+                var oneDimensional = (TElement?[])result;
+                for (var i = 0; i < oneDimensional.Length; i++)
+                    oneDimensional[i] = await ElementHandler.ReadNullableWithLength<TElement>(buf, async);
+                return oneDimensional;
+            }
+            return await base.FillOneDimensional(result, nullable, buf, async);
+        }
+
+        protected override async ValueTask<object> ReadElementAsObject(bool nullable, NpgsqlReadBuffer buf, bool async)
+        {
+            if (nullable)
+                return await ElementHandler.ReadNullableWithLength<TElement>(buf, async);
+
+            return await base.ReadElementAsObject(nullable, buf, async);
+        }
+    }
+
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/arrays.html
     /// </remarks>
@@ -340,6 +411,8 @@ namespace Npgsql.TypeHandlers
     /// <typeparam name="TElementPsv">The .NET provider-specific type contained as an element within this array</typeparam>
     class ArrayHandlerWithPsv<TElement, TElementPsv> : ArrayHandler<TElement>
     {
+        NpgsqlTypeHandler psvHandler;
+
         /// <summary>
         /// The provider-specific type of the elements contained within this array,
         /// </summary>
@@ -350,10 +423,14 @@ namespace Npgsql.TypeHandlers
         internal override object ReadPsvAsObject(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription)
             => ReadPsvAsObject(buf, len, false, fieldDescription).Result;
 
-        internal override async ValueTask<object> ReadPsvAsObject(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription)
-            => await Read<TElementPsv>(buf, async);
+        internal override async ValueTask<object> ReadPsvAsObject(NpgsqlReadBuffer buf, int len, bool async,
+            FieldDescription fieldDescription)
+            => await psvHandler.Read<TElementPsv[]>(buf, len, async, fieldDescription);
 
         public ArrayHandlerWithPsv(NpgsqlTypeHandler elementHandler)
-            : base(elementHandler) {}
+            : base(elementHandler)
+        {
+            psvHandler = new ArrayHandler<TElementPsv>(elementHandler);
+        }
     }
 }

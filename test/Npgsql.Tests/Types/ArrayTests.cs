@@ -88,15 +88,19 @@ namespace Npgsql.Tests.Types
         }
 
         [Test, Description("Roundtrips a simple, one-dimensional array of ints")]
-        public void Ints()
+        [TestCase(true, TestName = "Nullable array")]
+        [TestCase(false, TestName = "Non-nullable array")]
+        public void Ints(bool nullable)
         {
             using (var conn = OpenConnection())
             using (var cmd = new NpgsqlCommand("SELECT @p1, @p2, @p3", conn))
             {
-                var expected = new[] { 1, 5, 9 };
+                var expected = nullable ? (object)new int?[]{ 1, 5, 9, null } : new[] { 1, 5, 9 };
                 var p1 = new NpgsqlParameter("p1", NpgsqlDbType.Array | NpgsqlDbType.Integer);
                 var p2 = new NpgsqlParameter { ParameterName = "p2", Value = expected };
-                var p3 = new NpgsqlParameter<int[]>("p3", expected);
+                var p3 = nullable ?
+                    (NpgsqlParameter)new NpgsqlParameter<int?[]>("p3", (int?[])expected) :
+                    new NpgsqlParameter<int[]>("p3", (int[])expected);
                 cmd.Parameters.Add(p1);
                 cmd.Parameters.Add(p2);
                 cmd.Parameters.Add(p3);
@@ -108,7 +112,7 @@ namespace Npgsql.Tests.Types
                 {
                     Assert.That(reader.GetValue(i), Is.EqualTo(expected));
                     Assert.That(reader.GetProviderSpecificValue(i), Is.EqualTo(expected));
-                    Assert.That(reader.GetFieldValue<int[]>(i), Is.EqualTo(expected));
+                    Assert.That(nullable ? (object)reader.GetFieldValue<int?[]>(i) : reader.GetFieldValue<int[]>(i), Is.EqualTo(expected));
                     Assert.That(reader.GetFieldType(i), Is.EqualTo(typeof(Array)));
                     Assert.That(reader.GetProviderSpecificFieldType(i), Is.EqualTo(typeof(Array)));
                 }
