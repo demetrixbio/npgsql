@@ -45,5 +45,8 @@ namespace Npgsql.TypeHandlers
 
         public override void Write(bool value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteByte(value ? (byte)1 : (byte)0);
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<bool>(this) { PostgresType = arrayBackendType };
     }
 }

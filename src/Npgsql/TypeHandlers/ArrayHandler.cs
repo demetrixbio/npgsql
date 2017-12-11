@@ -26,6 +26,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+#if NETSTANDARD1_3
+using System.Reflection;
+#endif
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Npgsql.BackendMessages;
@@ -122,16 +125,22 @@ namespace Npgsql.TypeHandlers
         {
             await buf.Ensure(12, async);
             var dimensions = buf.ReadInt32();
-            bool nullable;
+            var containsNulls = Convert.ToBoolean(buf.ReadInt32());
             if (forcedNullability.HasValue)
             {
-                // Read and discard HasNulls
-                buf.ReadInt32();
-                nullable = forcedNullability.Value;
-            }
-            else
-            {
-                nullable = Convert.ToBoolean(buf.ReadInt32());
+
+                // This explicitly breaks compatibility with Npgsql Versions < 3.3
+                // because it prevents returning default(T) for value types
+                // Removing this exception would restore the previous (broken) functionality
+#if NETSTANDARD1_3
+                if (typeof(TElement).GetTypeInfo().IsValueType && containsNulls && !forcedNullability.Value)
+#else
+                if (typeof(TElement).IsValueType && containsNulls && !forcedNullability.Value)
+#endif
+                    throw new InvalidOperationException(
+                        $"Can't read a non-nullable array of '{typeof(TElement).Name}' if the database array field contains null values.");
+
+                containsNulls = forcedNullability.Value;
             }
 
             var elementOID = buf.ReadUInt32();
@@ -148,19 +157,19 @@ namespace Npgsql.TypeHandlers
                 buf.ReadInt32(); // We don't care about the lower bounds
             }
 
-            var result = InitArray(nullable, dimLengths);
+            var result = InitArray(containsNulls, dimLengths);
 
             if (dimensions == 0)
                 return result;
 
             if (dimensions == 1)
-                return await FillOneDimensional(result, nullable, buf, async);
+                return await FillOneDimensional(result, containsNulls, buf, async);
 
             // Multidimensional
             var indices = new int[dimensions];
             while (true)
             {
-                var element = await ReadElementAsObject(nullable, buf, async);
+                var element = await ReadElementAsObject(containsNulls, buf, async);
                 result.SetValue(element, indices);
 
                 // TODO: Overly complicated/inefficient...

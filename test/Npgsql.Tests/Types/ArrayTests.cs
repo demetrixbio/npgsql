@@ -42,6 +42,7 @@ namespace Npgsql.Tests.Types
     /// </remarks>
     class ArrayTests : TestBase
     {
+        
         [Test, Description("Resolves an array type handler via the different pathways")]
         public void ArrayTypeResolution()
         {
@@ -405,5 +406,47 @@ namespace Npgsql.Tests.Types
 
         class IntList : List<int> { }
         class MisleadingIntList<T> : List<int> { }
+
+        [Test]
+        public void Boolean()
+        {
+            using (var conn = OpenConnection())
+            {
+                conn.ExecuteNonQuery(
+                    @"CREATE TEMP TABLE mytable(id int, val bool[], val2 bool[][]);
+                    INSERT INTO mytable VALUES
+                    (1, ARRAY[]::bool[], ARRAY[[TRUE, FALSE], [FALSE, TRUE]]),
+                    (2, ARRAY[TRUE, FALSE, FALSE, TRUE], ARRAY[[TRUE, FALSE], [FALSE, TRUE]]),
+                    (3, ARRAY[TRUE, NULL, FALSE, NULL], ARRAY[[TRUE, NULL], [FALSE, NULL]]);");
+
+                var cmd = new NpgsqlCommand("SELECT * FROM mytable", conn);
+                using (var reader = cmd.ExecuteReader(CommandBehavior.SingleResult))
+                {
+                    Assert.True(reader.Read());
+                    Assert.That(reader.GetInt32(0), Is.EqualTo(1));
+                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool[] { }));
+                    Assert.That(reader.GetFieldValue<bool[]>(1), Is.EquivalentTo(new bool[] { }));
+                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { }));
+                    Assert.That(reader.GetValue(2), Is.EquivalentTo(new bool[,] { { true, false }, { false, true } }));
+                    Assert.That(reader.GetFieldValue<bool[,]>(2), Is.EquivalentTo(new bool[,] { { true, false }, { false, true } }));
+                    Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EquivalentTo(new bool?[,] { { true, false }, { false, true } }));
+
+                    Assert.True(reader.Read());
+                    Assert.That(reader.GetInt32(0), Is.EqualTo(2));
+                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool[] { true, false, false, true }));
+                    Assert.That(reader.GetFieldValue<bool[]>(1), Is.EquivalentTo(new bool[] { true, false, false, true }));
+                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { true, false, false, true }));
+
+                    Assert.True(reader.Read());
+                    Assert.That(reader.GetInt32(0), Is.EqualTo(3));
+                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool?[] { true, null, false, null }));
+                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { true, null, false, null }));
+                    Assert.That(reader.GetValue(2), Is.EquivalentTo(new bool?[,] { { true, null }, { false, null } }));
+                    Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EquivalentTo(new bool?[,] { { true, null }, { false, null } }));
+                    var ex = Assert.Throws<InvalidOperationException>(() => reader.GetFieldValue<bool[]>(1));
+                    Assert.That(ex.Message, Is.EqualTo("Can't read a non-nullable array of 'Boolean' if the database array field contains null values."));
+                }
+            }
+        }
     }
 }
