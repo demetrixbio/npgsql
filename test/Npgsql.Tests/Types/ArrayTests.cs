@@ -407,44 +407,125 @@ namespace Npgsql.Tests.Types
         class IntList : List<int> { }
         class MisleadingIntList<T> : List<int> { }
 
-        [Test]
-        public void Boolean()
+        private static object[][] boolean_tests = new[] {
+            new object[] { 1, new bool?[] { }, new bool?[,] { { false }, { true } } },
+            new object[] { 2, new bool?[] { true, false, false, true }, new bool?[,] { { true, false }, { false, true } } },
+            new object[] { 3, new bool?[] { true, null, false, null }, new bool?[,] { { true, null }, { false, null } } },
+        };
+
+        [Test, Description("Tests for nullable arrays of booleans")]
+        [TestCaseSource("boolean_tests")]
+        public void Boolean(int id, bool?[] oneDimensional, bool?[,] twoDimensional)
         {
             using (var conn = OpenConnection())
             {
-                conn.ExecuteNonQuery(
-                    @"CREATE TEMP TABLE mytable(id int, val bool[], val2 bool[][]);
-                    INSERT INTO mytable VALUES
-                    (1, ARRAY[]::bool[], ARRAY[[TRUE, FALSE], [FALSE, TRUE]]),
-                    (2, ARRAY[TRUE, FALSE, FALSE, TRUE], ARRAY[[TRUE, FALSE], [FALSE, TRUE]]),
-                    (3, ARRAY[TRUE, NULL, FALSE, NULL], ARRAY[[TRUE, NULL], [FALSE, NULL]]);");
+                conn.ExecuteNonQuery("CREATE TEMP TABLE mytable(id int, val bool[], val2 bool[][], val3 bool[][]);");
 
-                var cmd = new NpgsqlCommand("SELECT * FROM mytable", conn);
-                using (var reader = cmd.ExecuteReader(CommandBehavior.SingleResult))
+                var insert = new NpgsqlCommand("INSERT INTO mytable VALUES(@p1, @p2, @p3)", conn);
+                insert.Parameters.AddWithValue("p1", id);
+                insert.Parameters.Add(new NpgsqlParameter("p2", NpgsqlDbType.Array | NpgsqlDbType.Boolean) { Value = oneDimensional });
+                insert.Parameters.AddWithValue("p3", twoDimensional);
+                insert.Parameters.Add(new NpgsqlParameter<bool?[,]>("p4", twoDimensional));
+                insert.ExecuteNonQuery();
+
+                var select = new NpgsqlCommand("SELECT * FROM mytable", conn);
+                using (var reader = select.ExecuteReader(CommandBehavior.SingleResult))
                 {
                     Assert.True(reader.Read());
-                    Assert.That(reader.GetInt32(0), Is.EqualTo(1));
-                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool[] { }));
-                    Assert.That(reader.GetFieldValue<bool[]>(1), Is.EquivalentTo(new bool[] { }));
-                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { }));
-                    Assert.That(reader.GetValue(2), Is.EquivalentTo(new bool[,] { { true, false }, { false, true } }));
-                    Assert.That(reader.GetFieldValue<bool[,]>(2), Is.EquivalentTo(new bool[,] { { true, false }, { false, true } }));
-                    Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EquivalentTo(new bool?[,] { { true, false }, { false, true } }));
+                    switch (reader.GetInt32(0))
+                    {
+                        case 1:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new bool[] { }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new bool[] { }));
+                            Assert.That(reader.GetFieldValue<bool[]>(1), Is.EqualTo(new bool[] { }));
+                            Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EqualTo(new bool?[] { }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new bool[,] { { false }, { true } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new bool[,] { { false }, { true } }));
+                            Assert.That(reader.GetFieldValue<bool[,]>(2), Is.EqualTo(new bool[,] { { false }, { true } }));
+                            Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EqualTo(new bool?[,] { { false }, { true } }));
+                            break;
+                        case 2:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new bool[] { true, false, false, true }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new bool[] { true, false, false, true }));
+                            Assert.That(reader.GetFieldValue<bool[]>(1), Is.EqualTo(new bool[] { true, false, false, true }));
+                            Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EqualTo(new bool?[] { true, false, false, true }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new bool[,] { { true, false }, { false, true } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new bool[,] { { true, false }, { false, true } }));
+                            Assert.That(reader.GetFieldValue<bool[,]>(2), Is.EqualTo(new bool[,] { { true, false }, { false, true } }));
+                            Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EqualTo(new bool?[,] { { true, false }, { false, true } }));
+                            break;
+                        case 3:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new bool?[] { true, null, false, null }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new bool?[] { true, null, false, null }));
+                            Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EqualTo(new bool?[] { true, null, false, null }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new bool?[,] { { true, null }, { false, null } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new bool?[,] { { true, null }, { false, null } }));
+                            Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EqualTo(new bool?[,] { { true, null }, { false, null } }));
+                            var ex = Assert.Throws<InvalidOperationException>(() => reader.GetFieldValue<bool[]>(1));
+                            Assert.That(ex.Message, Is.EqualTo("Can't read a non-nullable array of 'Boolean' if the database array field contains null values."));
+                            break;
+                    }
+                }
+            }
+        }
+        private static object[][] byte_tests = new[] {
+            new object[] { 1, new byte?[] { }, new byte?[,] { { 1 }, { 2 } } },
+            new object[] { 2, new byte?[] { 1, 2, 3, 4 }, new byte?[,] { { 1, 2 }, { 3, 4 } } },
+            new object[] { 3, new byte?[] { 1, null, 3, null }, new byte?[,] { { 1, null }, { 3, null } } },
+        };
 
-                    Assert.True(reader.Read());
-                    Assert.That(reader.GetInt32(0), Is.EqualTo(2));
-                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool[] { true, false, false, true }));
-                    Assert.That(reader.GetFieldValue<bool[]>(1), Is.EquivalentTo(new bool[] { true, false, false, true }));
-                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { true, false, false, true }));
+        [Test, Description("Tests for nullable arrays of bytes")]
+        [TestCaseSource("byte_tests")]
+        public void Byte(int id, byte?[] oneDimensional, byte?[,] twoDimensional)
+        {
+            using (var conn = OpenConnection())
+            {
+                conn.ExecuteNonQuery("CREATE TEMP TABLE mytable(id int, val smallint[], val2 smallint[][], val3 smallint[][]);");
 
+                var insert = new NpgsqlCommand("INSERT INTO mytable VALUES(@p1, @p2, @p3)", conn);
+                insert.Parameters.AddWithValue("p1", id);
+                insert.Parameters.Add(new NpgsqlParameter("p2", NpgsqlDbType.Array | NpgsqlDbType.Smallint) { Value = oneDimensional });
+                insert.Parameters.AddWithValue("p3", twoDimensional);
+                insert.Parameters.Add(new NpgsqlParameter<byte?[,]>("p4", twoDimensional));
+                insert.ExecuteNonQuery();
+
+                var select = new NpgsqlCommand("SELECT * FROM mytable", conn);
+                using (var reader = select.ExecuteReader(CommandBehavior.SingleResult))
+                {
                     Assert.True(reader.Read());
-                    Assert.That(reader.GetInt32(0), Is.EqualTo(3));
-                    Assert.That(reader.GetValue(1), Is.EquivalentTo(new bool?[] { true, null, false, null }));
-                    Assert.That(reader.GetFieldValue<bool?[]>(1), Is.EquivalentTo(new bool?[] { true, null, false, null }));
-                    Assert.That(reader.GetValue(2), Is.EquivalentTo(new bool?[,] { { true, null }, { false, null } }));
-                    Assert.That(reader.GetFieldValue<bool?[,]>(2), Is.EquivalentTo(new bool?[,] { { true, null }, { false, null } }));
-                    var ex = Assert.Throws<InvalidOperationException>(() => reader.GetFieldValue<bool[]>(1));
-                    Assert.That(ex.Message, Is.EqualTo("Can't read a non-nullable array of 'Boolean' if the database array field contains null values."));
+                    switch (reader.GetInt32(0))
+                    {
+                        case 1:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new byte[] { }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new byte[] { }));
+                            Assert.That(reader.GetFieldValue<byte[]>(1), Is.EqualTo(new byte[] { }));
+                            Assert.That(reader.GetFieldValue<byte?[]>(1), Is.EqualTo(new byte?[] { }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new byte[,] { { 1 }, { 2 } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new byte[,] { { 1 }, { 2 } }));
+                            Assert.That(reader.GetFieldValue<byte[,]>(2), Is.EqualTo(new byte[,] { { 1 }, { 2 } }));
+                            Assert.That(reader.GetFieldValue<byte?[,]>(2), Is.EqualTo(new byte?[,] { { 1 }, { 2 } }));
+                            break;
+                        case 2:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new byte[] { 1, 2, 3, 4 }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new byte[] { 1, 2, 3, 4 }));
+                            Assert.That(reader.GetFieldValue<byte[]>(1), Is.EqualTo(new byte[] { 1, 2, 3, 4 }));
+                            Assert.That(reader.GetFieldValue<byte?[]>(1), Is.EqualTo(new byte?[] { 1, 2, 3, 4 }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new byte[,] { { 1, 2 }, { 3, 4 } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new byte[,] { { 1, 2 }, { 3, 4 } }));
+                            Assert.That(reader.GetFieldValue<byte[,]>(2), Is.EqualTo(new byte[,] { { 1, 2 }, { 3, 4 } }));
+                            Assert.That(reader.GetFieldValue<byte?[,]>(2), Is.EqualTo(new byte?[,] { { 1, 2 }, { 3, 4 } }));
+                            break;
+                        case 3:
+                            Assert.That(reader.GetValue(1), Is.EqualTo(new byte?[] { 1, null, 3, null }));
+                            Assert.That(reader.GetProviderSpecificValue(1), Is.EqualTo(new byte?[] { 1, null, 3, null }));
+                            Assert.That(reader.GetFieldValue<byte?[]>(1), Is.EqualTo(new byte?[] { 1, null, 3, null }));
+                            Assert.That(reader.GetValue(2), Is.EqualTo(new byte?[,] { { 1, null }, { 3, null } }));
+                            Assert.That(reader.GetProviderSpecificValue(2), Is.EqualTo(new byte?[,] { { 1, null }, { 3, null } }));
+                            Assert.That(reader.GetFieldValue<byte?[,]>(2), Is.EqualTo(new byte?[,] { { 1, null }, { 3, null } }));
+                            var ex = Assert.Throws<InvalidOperationException>(() => reader.GetFieldValue<byte[]>(1));
+                            Assert.That(ex.Message, Is.EqualTo("Can't read a non-nullable array of 'Byte' if the database array field contains null values."));
+                            break;
+                    }
                 }
             }
         }

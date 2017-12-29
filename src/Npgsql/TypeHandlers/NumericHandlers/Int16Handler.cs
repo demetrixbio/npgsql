@@ -30,13 +30,14 @@ using JetBrains.Annotations;
 using Npgsql.PostgresTypes;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
+using System.Threading.Tasks;
 
 namespace Npgsql.TypeHandlers.NumericHandlers
 {
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-numeric.html
     /// </remarks>
-    [TypeMapping("int2", NpgsqlDbType.Smallint, new[] { DbType.Int16, DbType.Byte, DbType.SByte }, new[] { typeof(short), typeof(byte), typeof(sbyte) }, DbType.Int16)]
+    [TypeMapping("int2", NpgsqlDbType.Smallint, new[] { DbType.Int16, DbType.Byte, DbType.SByte }, new[] { typeof(short), typeof(byte), typeof(sbyte), typeof(short?), typeof(byte?), typeof(sbyte?) }, DbType.Int16)]
     class Int16Handler : NpgsqlSimpleTypeHandler<short>,
         INpgsqlSimpleTypeHandler<byte>, INpgsqlSimpleTypeHandler<sbyte>, INpgsqlSimpleTypeHandler<int>, INpgsqlSimpleTypeHandler<long>,
         INpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>, INpgsqlSimpleTypeHandler<decimal>,
@@ -117,5 +118,50 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         }
 
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new Int16ArrayHandler(this) { PostgresType = arrayBackendType };
+    }
+
+    class Int16ArrayHandler : ValueTypeArrayHandler<short>
+    {
+        ValueTypeArrayHandler<byte> byteHandler;
+        ValueTypeArrayHandler<sbyte> sbyteHandler;
+
+        public Int16ArrayHandler(Int16Handler elementHandler)
+            : base(elementHandler)
+        {
+            byteHandler = new ValueTypeArrayHandler<byte>(elementHandler);
+            sbyteHandler = new ValueTypeArrayHandler<sbyte>(elementHandler);
+        }
+
+        protected internal override async ValueTask<TArray> Read<TArray>(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription = null)
+        {
+            var t = typeof(TArray);
+            if (!t.IsArray)
+                throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+            var elementType = t.GetElementType();
+            var elementFieldType = GetElementFieldType();
+
+            if (elementType == elementFieldType)
+                return (TArray)(object)await Read(buf, async, false);
+            if (Nullable.GetUnderlyingType(elementType) == elementFieldType)
+                return (TArray)(object)await Read(buf, async, true);
+            if (elementType == typeof(byte))
+                return (TArray)(object)await byteHandler.Read(buf, async, false);
+            if (Nullable.GetUnderlyingType(elementType) == typeof(byte))
+                return (TArray)(object)await byteHandler.Read(buf, async, true);
+            if (elementType == typeof(sbyte))
+                return (TArray)(object)await sbyteHandler.Read(buf, async, false);
+            if (Nullable.GetUnderlyingType(elementType) == typeof(sbyte))
+                return (TArray)(object)await sbyteHandler.Read(buf, async, true);
+            throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+        }
+
+        internal override ValueTask<object> ReadAsObject(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription)
+        {
+            return base.ReadAsObject(buf, len, async, fieldDescription);
+        }
+
     }
 }

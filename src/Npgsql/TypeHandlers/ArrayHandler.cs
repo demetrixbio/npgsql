@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Npgsql.BackendMessages;
 using Npgsql.TypeHandling;
+using Npgsql.Util;
 
 namespace Npgsql.TypeHandlers
 {
@@ -132,11 +133,7 @@ namespace Npgsql.TypeHandlers
                 // This explicitly breaks compatibility with Npgsql Versions < 3.3
                 // because it prevents returning default(T) for value types
                 // Removing this exception would restore the previous (broken) functionality
-#if NETSTANDARD1_3
-                if (typeof(TElement).GetTypeInfo().IsValueType && containsNulls && !forcedNullability.Value)
-#else
-                if (typeof(TElement).IsValueType && containsNulls && !forcedNullability.Value)
-#endif
+                if (TypeHelper.IsValueType(typeof(TElement)) && containsNulls && !forcedNullability.Value)
                     throw new InvalidOperationException(
                         $"Can't read a non-nullable array of '{typeof(TElement).Name}' if the database array field contains null values.");
 
