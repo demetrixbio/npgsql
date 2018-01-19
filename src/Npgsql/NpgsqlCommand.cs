@@ -456,9 +456,12 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                 {
                     var param = new NpgsqlParameter();
 
-                    (param.NpgsqlDbType, param.PostgresType, param.SpecificType) =
+                    (var npgsqlDbType, var dataTypeName) =
                         c.Connection.Connector.TypeMapper.GetTypeInfoByOid(types[i]);
 
+                    param.DataTypeName = dataTypeName;
+                    if (npgsqlDbType.HasValue)
+                        param.NpgsqlDbType = npgsqlDbType.Value;
 
                     if (names != null && i < names.Length)
                         param.ParameterName = names[i];
@@ -523,16 +526,14 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                             var param = statement.InputParameters[i];
                             var paramOid = paramTypeOIDs[i];
 
-                            (NpgsqlDbType npgsqlDbType, PostgresType postgresType, Type specificType) =
-                                connector.TypeMapper.GetTypeInfoByOid(paramOid);
+                            (var npgsqlDbType, var dataTypeName) = connector.TypeMapper.GetTypeInfoByOid(paramOid);
 
                             if (param.NpgsqlDbType != NpgsqlDbType.Unknown && param.NpgsqlDbType != npgsqlDbType)
-                            {
                                 throw new NpgsqlException("The backend parser inferred different types for parameters with the same name. Please try explicit casting within your SQL statement or batch or use different placeholder names.");
-                            }
-                            param.NpgsqlDbType = npgsqlDbType;
-                            param.PostgresType = postgresType;
-                            param.SpecificType = specificType;
+
+                            param.DataTypeName = dataTypeName;
+                            if (npgsqlDbType.HasValue)
+                                param.NpgsqlDbType = npgsqlDbType.Value;
                         }
                         catch
                         {
