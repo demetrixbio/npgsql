@@ -47,5 +47,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
 
         public override void Write(decimal value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteInt64((long)(Math.Round(value, 2, MidpointRounding.AwayFromZero) * 100m));
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<decimal>(this) { PostgresType = arrayBackendType };
     }
 }

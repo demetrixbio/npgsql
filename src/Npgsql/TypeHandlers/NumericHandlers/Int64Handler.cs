@@ -36,7 +36,7 @@ namespace Npgsql.TypeHandlers.NumericHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-numeric.html
     /// </remarks>
-    [TypeMapping("int8", NpgsqlDbType.Bigint, DbType.Int64, typeof(long))]
+    [TypeMapping("int8", NpgsqlDbType.Bigint, DbType.Int64, new[] { typeof(long), typeof(long?) })]
     class Int64Handler : NpgsqlSimpleTypeHandler<long>,
         INpgsqlSimpleTypeHandler<byte>, INpgsqlSimpleTypeHandler<short>, INpgsqlSimpleTypeHandler<int>,
         INpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>, INpgsqlSimpleTypeHandler<decimal>,
@@ -110,5 +110,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         }
 
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<long>(this) { PostgresType = arrayBackendType };
     }
 }

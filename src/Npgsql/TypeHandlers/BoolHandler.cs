@@ -34,7 +34,7 @@ namespace Npgsql.TypeHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-boolean.html
     /// </remarks>
-    [TypeMapping("bool", NpgsqlDbType.Boolean, DbType.Boolean, typeof(bool))]
+    [TypeMapping("bool", NpgsqlDbType.Boolean, DbType.Boolean, new[] { typeof(bool), typeof(bool?) })]
     class BoolHandler : NpgsqlSimpleTypeHandler<bool>
     {
         public override bool Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -45,5 +45,8 @@ namespace Npgsql.TypeHandlers
 
         public override void Write(bool value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteByte(value ? (byte)1 : (byte)0);
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<bool>(this) { PostgresType = arrayBackendType };
     }
 }

@@ -27,13 +27,14 @@ using System.Data;
 using JetBrains.Annotations;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
+using Npgsql.PostgresTypes;
 
 namespace Npgsql.TypeHandlers.NumericHandlers
 {
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-numeric.html
     /// </remarks>
-    [TypeMapping("float4", NpgsqlDbType.Real, DbType.Single, typeof(float))]
+    [TypeMapping("float4", NpgsqlDbType.Real, DbType.Single, new[] { typeof(float), typeof(float?) })]
     class SingleHandler : NpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>
     {
         #region Read
@@ -61,5 +62,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
             => buf.WriteSingle(value);
 
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<float>(this) { PostgresType = arrayBackendType };
     }
 }

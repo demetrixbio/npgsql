@@ -34,7 +34,7 @@ namespace Npgsql.TypeHandlers.NumericHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-numeric.html
     /// </remarks>
-    [TypeMapping("float8", NpgsqlDbType.Double, DbType.Double, typeof(double))]
+    [TypeMapping("float8", NpgsqlDbType.Double, DbType.Double, new[] { typeof(double), typeof(double?) })]
     class DoubleHandler : NpgsqlSimpleTypeHandler<double>
     {
         public override double Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -45,5 +45,7 @@ namespace Npgsql.TypeHandlers.NumericHandlers
 
         public override void Write(double value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteDouble(value);
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<double>(this) { PostgresType = arrayBackendType };
     }
 }

@@ -112,6 +112,21 @@ namespace Npgsql.TypeHandling
             return await Read<T>(buf, len, async, fieldDescription);
         }
 
+        /// <summary>
+        /// Reads a value from the buffer, assuming our read position is at the value's preceding length.
+        /// If the length is -1 (null), this method will return the default value.
+        /// </summary>
+        [ItemCanBeNull]
+        internal async ValueTask<T?> ReadNullableWithLength<T>(NpgsqlReadBuffer buf, bool async, FieldDescription fieldDescription = null)
+            where T : struct 
+        {
+            await buf.Ensure(4, async);
+            var len = buf.ReadInt32();
+            if (len == -1)
+                return null;
+            return await Read<T>(buf, len, async, fieldDescription);
+        }
+
         #endregion
 
         #region Write

@@ -22,6 +22,7 @@
 #endregion
 
 using Npgsql.BackendMessages;
+using Npgsql.PostgresTypes;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
 using NpgsqlTypes;
@@ -44,5 +45,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
 
         public override void Write(uint value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteInt32((int)value);
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<uint>(this) { PostgresType = arrayBackendType };
     }
 }
