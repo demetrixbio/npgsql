@@ -183,35 +183,36 @@ namespace Npgsql
             lock (pools)
             {
                 if (pools.TryGetValue(_connectionString, out _pool))
-                    Settings = _pool.Settings;  // Great, we already have a pool
+                {
+                    Settings = _pool.Settings; // Great, we already have a pool
+                    return;
+                }
+
+                // Connection string hasn't been seen before. Parse it.
+                Settings = new NpgsqlConnectionStringBuilder(_connectionString);
+
+                if (!_countersInitialized)
+                {
+                    _countersInitialized = true;
+                    Counters.Initialize(Settings.UsePerfCounters);
+                }
+
+                // Maybe pooling is off
+                if (!Settings.Pooling)
+                    return;
+
+                // Connstring may be equivalent to one that has already been seen though (e.g. different
+                // ordering). Have NpgsqlConnectionStringBuilder produce a canonical string representation
+                // and recheck.
+                var canonical = Settings.ConnectionString;
+                if (pools.TryGetValue(canonical, out _pool))
+                    pools[_connectionString] = _pool;
                 else
                 {
-                    // Connection string hasn't been seen before. Parse it.
-                    Settings = new NpgsqlConnectionStringBuilder(_connectionString);
-
-                    if (!_countersInitialized)
-                    {
-                        _countersInitialized = true;
-                        Counters.Initialize(Settings.UsePerfCounters);
-                    }
-
-                    // Maybe pooling is off
-                    if (Settings.Pooling)
-                    {
-                        // Connstring may be equivalent to one that has already been seen though (e.g. different
-                        // ordering). Have NpgsqlConnectionStringBuilder produce a canonical string representation
-                        // and recheck.
-                        var canonical = Settings.ConnectionString;
-                        if (pools.TryGetValue(canonical, out _pool))
-                            pools[_connectionString] = _pool;
-                        else
-                        {
-                            // Really unseen, need to create a new pool
-                            _pool = pools[_connectionString] = new ConnectorPool(Settings, canonical);
-                            if (_connectionString != canonical)
-                                pools[canonical] = _pool;
-                        }
-                    }
+                    // Really unseen, need to create a new pool
+                    _pool = pools[_connectionString] = new ConnectorPool(Settings, canonical);
+                    if (_connectionString != canonical)
+                        pools[canonical] = _pool;
                 }
             }
         }
@@ -581,13 +582,15 @@ namespace Npgsql
 
             Connector.CloseOngoingOperations();
 
-            if (!Settings.Pooling)
-                Connector.Close();
-            else
-            {
 #if NETSTANDARD1_3
+            // No support for System.Transactions, simply release or close
+            if (Settings.Pooling)
                 _pool.Release(Connector);
+            else
+                Connector.Close();
 #else
+            if (Settings.Pooling)
+            {
                 if (EnlistedTransaction == null)
                     _pool.Release(Connector);
                 else
@@ -599,8 +602,18 @@ namespace Npgsql
                     Connector.Connection = null;
                     EnlistedTransaction = null;
                 }
-#endif
             }
+            else  // Non-pooled connection
+            {
+                if (EnlistedTransaction == null)
+                    Connector.Close();
+                // If a non-pooled connection is being closed but is enlisted in an ongoing
+                // TransactionScope, simply detach the connector from the connection and leave
+                // it open. It will be closed when the TransactionScope is disposed.
+                Connector.Connection = null;
+                EnlistedTransaction = null;
+            }
+#endif
 
             Log.Debug("Connection closed", connectorId);
 

@@ -59,7 +59,12 @@ namespace Npgsql
         internal NpgsqlCommand Command { get; }
         internal readonly NpgsqlConnector Connector;
         readonly NpgsqlConnection _connection;
+
+        /// <summary>
+        /// The behavior of the command with which this reader was executed.
+        /// </summary>
         protected readonly CommandBehavior Behavior;
+
         readonly Task _sendTask;
 
         internal ReaderState State;
@@ -142,6 +147,9 @@ namespace Npgsql
                 return Read(true);
         }
 
+        /// <summary>
+        /// Implementation of read
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected virtual async Task<bool> Read(bool async)
         {
@@ -1151,7 +1159,7 @@ namespace Npgsql
             table.Columns.Add("BaseTableName", typeof(string));
             table.Columns.Add("DataType", typeof(Type));
             table.Columns.Add("AllowDBNull", typeof(bool));
-            table.Columns.Add("ProviderType", typeof(Type));
+            table.Columns.Add("ProviderType", typeof(int));
             table.Columns.Add("IsAliased", typeof(bool));
             table.Columns.Add("IsExpression", typeof(bool));
             table.Columns.Add("IsIdentity", typeof(bool));
@@ -1179,8 +1187,9 @@ namespace Npgsql
                 row["BaseColumnName"] = column.BaseColumnName;
                 row["BaseSchemaName"] = column.BaseSchemaName;
                 row["BaseTableName"] = column.BaseTableName;
-                row["DataType"] = row["ProviderType"] = column.DataType; // Non-standard
+                row["DataType"] = column.DataType;
                 row["AllowDBNull"] = (object)column.AllowDBNull ?? DBNull.Value;
+                row["ProviderType"] = column.NpgsqlDbType;
                 row["IsAliased"] = column.IsAliased == true;
                 row["IsExpression"] = column.IsExpression == true;
                 row["IsIdentity"] = column.IsIdentity == true;
