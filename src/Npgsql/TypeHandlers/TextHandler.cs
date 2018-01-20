@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
+using Npgsql.PostgresTypes;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -240,5 +241,8 @@ namespace Npgsql.TypeHandlers
 #pragma warning disable CA2119 // Seal methods that satisfy private interfaces
         public virtual TextReader GetTextReader(Stream stream) => new StreamReader(stream);
 #pragma warning restore CA2119 // Seal methods that satisfy private interfaces
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new StringArrayHandler(this) { PostgresType = arrayBackendType };
     }
 }

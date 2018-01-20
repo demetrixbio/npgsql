@@ -27,6 +27,8 @@ using System.Data;
 using JetBrains.Annotations;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
+using System;
+using Npgsql.PostgresTypes;
 
 namespace Npgsql.TypeHandlers.NumericHandlers
 {
@@ -34,8 +36,10 @@ namespace Npgsql.TypeHandlers.NumericHandlers
     /// http://www.postgresql.org/docs/current/static/datatype-numeric.html
     /// </remarks>
     [TypeMapping("float4", NpgsqlDbType.Real, DbType.Single, typeof(float))]
-    class SingleHandler : NpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>
+    class SingleHandler : NpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>, INpgsqlSimpleTypeHandler<IConvertible>
     {
+        private const int Float4Length = 4;
+
         #region Read
 
         public override float Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -44,15 +48,28 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         double INpgsqlSimpleTypeHandler<double>.Read(NpgsqlReadBuffer buf, int len, [CanBeNull] FieldDescription fieldDescription)
             => Read(buf, len, fieldDescription);
 
+        IConvertible INpgsqlSimpleTypeHandler<IConvertible>.Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription)
+            => Read(buf, len, fieldDescription);
+
         #endregion Read
 
         #region Write
 
         public int ValidateAndGetLength(double value, NpgsqlParameter parameter)
-            => 4;
+            => Float4Length;
 
         public override int ValidateAndGetLength(float value, NpgsqlParameter parameter)
-            => 4;
+            => Float4Length;
+
+        public int ValidateAndGetLength(IConvertible value, [CanBeNull] NpgsqlParameter parameter)
+        {
+            if (parameter == null)
+                throw CreateConversionButNoParamException(value.GetType());
+
+            var converted = Convert.ToSingle(value);
+            parameter.ConvertedValue = converted;
+            return Float4Length;
+        }
 
         public void Write(double value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteSingle((float)value);
@@ -60,6 +77,12 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         public override void Write(float value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteSingle(value);
 
+        public void Write(IConvertible value, NpgsqlWriteBuffer buf, [CanBeNull] NpgsqlParameter parameter)
+            => buf.WriteSingle((float)parameter.ConvertedValue);
+
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new NumericArrayHandler<float>(this) { PostgresType = arrayBackendType };
     }
 }

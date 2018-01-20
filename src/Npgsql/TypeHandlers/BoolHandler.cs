@@ -35,15 +35,36 @@ namespace Npgsql.TypeHandlers
     /// http://www.postgresql.org/docs/current/static/datatype-boolean.html
     /// </remarks>
     [TypeMapping("bool", NpgsqlDbType.Boolean, DbType.Boolean, typeof(bool))]
-    class BoolHandler : NpgsqlSimpleTypeHandler<bool>
+    class BoolHandler : NpgsqlSimpleTypeHandler<bool>, INpgsqlSimpleTypeHandler<IConvertible>
     {
+        private const int BoolLength = 1;
+
         public override bool Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
             => buf.ReadByte() != 0;
 
+        IConvertible INpgsqlSimpleTypeHandler<IConvertible>.Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription)
+            => Read(buf, len, fieldDescription);
+
         public override int ValidateAndGetLength(bool value, NpgsqlParameter parameter)
-            => 1;
+            => BoolLength;
+
+        public int ValidateAndGetLength(IConvertible value, NpgsqlParameter parameter)
+        {
+            if (parameter == null)
+                throw CreateConversionButNoParamException(value.GetType());
+
+            var converted = Convert.ToBoolean(value);
+            parameter.ConvertedValue = converted;
+            return BoolLength;
+        }
+
+        static void Write(bool value, NpgsqlWriteBuffer buf)
+            => buf.WriteByte(value ? (byte)1 : (byte)0);
 
         public override void Write(bool value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
-            => buf.WriteByte(value ? (byte)1 : (byte)0);
+            => Write(value, buf);
+
+        public void Write(IConvertible value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
+            => Write((bool)parameter.ConvertedValue, buf);
     }
 }

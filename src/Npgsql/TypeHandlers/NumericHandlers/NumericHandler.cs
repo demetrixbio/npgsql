@@ -233,5 +233,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         }
 
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new NumericArrayHandler<decimal>(this) { PostgresType = arrayBackendType };
     }
 }

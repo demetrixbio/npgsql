@@ -170,6 +170,17 @@ namespace Npgsql.TypeHandlers
             }
         }
 
+        private static readonly TElement[] EmptyOneDimensionalArray = new TElement[0];
+
+        protected virtual Array InitArray(bool nullable, int[] lengths, int[] lowerBounds = null)
+        {
+            if (lengths.Length == 0 && (lowerBounds == null || lowerBounds[0] == 0))
+                return EmptyOneDimensionalArray;
+            if (lowerBounds == null)
+                return Array.CreateInstance(typeof(TElement), lengths);
+
+            return Array.CreateInstance(typeof(TElement), lengths, lowerBounds);
+        }
         #endregion
 
         #region Write
@@ -193,19 +204,19 @@ namespace Npgsql.TypeHandlers
 
             switch (value)
             {
-            case IList<TElement2> asGeneric:
-                return ValidateAndGetLengthGeneric(asGeneric, ref lengthCache);
-            case IList asNonGeneric:
-                return ValidateAndGetLengthNonGeneric(asNonGeneric, ref lengthCache);
-            default:
-                throw new InvalidCastException($"Can't write type {value.GetType()} as an array of {typeof(TElement2)}");
+                case IList<TElement2> asGeneric:
+                    return ValidateAndGetLengthGeneric(asGeneric, ref lengthCache, parameter);
+                case IList asNonGeneric:
+                    return ValidateAndGetLengthNonGeneric(asNonGeneric, ref lengthCache, parameter);
+                default:
+                    throw new InvalidCastException($"Can't write type {value.GetType()} as an array of {typeof(TElement2)}");
             }
         }
 
         /// <summary>
         /// Handle single-dimensional arrays and generic IList
         /// </summary>
-        int ValidateAndGetLengthGeneric<TElement2>(IList<TElement2> value, ref NpgsqlLengthCache lengthCache)
+        int ValidateAndGetLengthGeneric<TElement2>(IList<TElement2> value, ref NpgsqlLengthCache lengthCache, NpgsqlParameter parameter)
         {
             // Leave empty slot for the entire array length, and go ahead an populate the element slots
             var pos = lengthCache.Position;
@@ -216,18 +227,18 @@ namespace Npgsql.TypeHandlers
                 4 +       // has_nulls (unused)
                 4 +       // type OID
                 1 * 8 +   // number of dimensions (1) * (length + lower bound)
-                value.Sum(e => 4 + GetSingleElementLength(e, ref lengthCache2));
+                value.Sum(e => 4 + GetSingleElementLength(e, ref lengthCache2, parameter));
             lengthCache = lengthCache2;
             return lengthCache.Lengths[pos] = len;
         }
 
-        int GetSingleElementLength<T2>([CanBeNull] T2 element, ref NpgsqlLengthCache lengthCache)
+        int GetSingleElementLength<T2>([CanBeNull] T2 element, ref NpgsqlLengthCache lengthCache, NpgsqlParameter parameter)
         {
             if (element == null || typeof(T2) == typeof(DBNull))
                 return 0;
             try
             {
-                return ElementHandler.ValidateAndGetLength(element, ref lengthCache, null);
+                return ElementHandler.ValidateAndGetLength(element, ref lengthCache, parameter);
             }
             catch (Exception e)
             {
@@ -238,10 +249,12 @@ namespace Npgsql.TypeHandlers
         /// <summary>
         /// Take care of multi-dimensional arrays and non-generic IList, we have no choice but to box/unbox
         /// </summary>
-        int ValidateAndGetLengthNonGeneric(IList value, ref NpgsqlLengthCache lengthCache)
+        int ValidateAndGetLengthNonGeneric(IList value, ref NpgsqlLengthCache lengthCache, NpgsqlParameter parameter)
         {
             var asMultidimensional = value as Array;
             var dimensions = asMultidimensional?.Rank ?? 1;
+            var lengths = new int[dimensions];
+            Array convertedArray;
 
             // Leave empty slot for the entire array length, and go ahead an populate the element slots
             var pos = lengthCache.Position;
@@ -251,20 +264,79 @@ namespace Npgsql.TypeHandlers
                 4 +       // dimensions
                 4 +       // has_nulls (unused)
                 4 +       // type OID
-                dimensions * 8 +  // number of dimensions * (length + lower bound)
-                value.Cast<object>().Sum(element => 4 + GetSingleElementObjectLength(element, ref lengthCache2));
+                dimensions * 8;  // number of dimensions * (length + lower bound)
+
+            var hasConvertedValue = false;
+            if(dimensions == 1)
+            {
+                var oneDimLength = value.Count;
+                lengths[0] = oneDimLength;
+                convertedArray = InitArray(true, lengths);
+                for(var i = oneDimLength - 1; i >= 0; i--)
+                {
+                    len += 4 + GetSingleElementObjectLength(value[i], ref lengthCache2, parameter);
+                    if (parameter.ConvertedValue != null)
+                    {
+                        convertedArray.SetValue(parameter.ConvertedValue, i);
+                        hasConvertedValue = true;
+                    }
+                }
+            }
+            else
+            {
+                var lowerBounds = new int[dimensions];
+                for(var i = dimensions - 1; i >= 0; i--)
+                {
+                    lengths[i] = asMultidimensional.GetLength(i);
+                    lowerBounds[i] = asMultidimensional.GetLowerBound(i);
+                }
+                convertedArray = InitArray(true, lengths, lowerBounds);
+                var indices = new int[dimensions];
+                var currentDimIndex = 0;
+                hasConvertedValue = GetSingleElementObjectLengthsRecursive(convertedArray, asMultidimensional, ref currentDimIndex, indices, ref lengthCache2, parameter, ref len);
+            }
+            if(hasConvertedValue)
+                parameter.ConvertedValue = convertedArray;
+
             lengthCache = lengthCache2;
             lengthCache.Lengths[pos] = len;
             return len;
         }
 
-        int GetSingleElementObjectLength([CanBeNull] object element, ref NpgsqlLengthCache lengthCache)
+        private bool GetSingleElementObjectLengthsRecursive(Array target, Array array, ref int currentDimIndex, int[] indices, ref NpgsqlLengthCache lengthCache, NpgsqlParameter parameter, ref int length)
+        {
+            var hasConvertedValue = false;
+            for (var i = array.GetLowerBound(currentDimIndex); i <= array.GetUpperBound(currentDimIndex); i++)
+            {
+                indices[currentDimIndex] = i;
+                if (currentDimIndex < array.Rank - 1)
+                {
+                    currentDimIndex++;
+                    var ret = GetSingleElementObjectLengthsRecursive(target, array, ref currentDimIndex, indices, ref lengthCache, parameter, ref length);
+                    if (!hasConvertedValue)
+                        hasConvertedValue = ret;
+                }
+                else
+                {
+                    length += 4 + GetSingleElementObjectLength(array.GetValue(indices), ref lengthCache, parameter);
+                    if (parameter.ConvertedValue != null)
+                    {
+                        target.SetValue(parameter.ConvertedValue, indices);
+                        hasConvertedValue = true;
+                    }
+                }
+            }
+            currentDimIndex--;
+            return hasConvertedValue;
+        }
+
+        int GetSingleElementObjectLength([CanBeNull] object element, ref NpgsqlLengthCache lengthCache, NpgsqlParameter parameter)
         {
             if (element == null || element is DBNull)
                 return 0;
             try
             {
-                return ElementHandler.ValidateObjectAndGetLength(element, ref lengthCache, null);
+                return ElementHandler.ValidateObjectAndGetLength(element, ref lengthCache, parameter);
             }
             catch (Exception e)
             {
@@ -284,9 +356,14 @@ namespace Npgsql.TypeHandlers
         // The default WriteObjectWithLength casts the type handler to INpgsqlTypeHandler<T>, but that's not sufficient for
         // us (need to handle many types of T, e.g. int[], int[,]...)
         protected internal override Task WriteObjectWithLength(object value, NpgsqlWriteBuffer buf, NpgsqlLengthCache lengthCache, NpgsqlParameter parameter, bool async)
-            => value == null || value is DBNull
-                ? WriteWithLengthInternal<DBNull>(null, buf, lengthCache, parameter, async)
-                : WriteWithLengthInternal(value, buf, lengthCache, parameter, async);
+        {
+            if (value == null || value is DBNull)
+                return WriteWithLengthInternal<DBNull>(null, buf, lengthCache, parameter, async);
+            if (parameter.ConvertedValue != null)
+                return WriteWithLengthInternal(parameter.ConvertedValue, buf, lengthCache, parameter, async);
+
+            return WriteWithLengthInternal(value, buf, lengthCache, parameter, async);
+        }
 
         // TODO: Implement WriteVector which writes arrays without boxing... (accept IList<T2>)
         async Task Write(object value, NpgsqlWriteBuffer buf, NpgsqlLengthCache lengthCache, bool async)
@@ -333,6 +410,104 @@ namespace Npgsql.TypeHandlers
 #pragma warning restore CA1061 // Do not hide base class methods
 #pragma warning restore CA1801 // Review unused parameters
 
+    class StringArrayHandler : ArrayHandler<string>
+    {
+        private Lazy<ArrayHandler<char[]>> charArrayHandler;
+
+        public StringArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler, int lowerBound) : base(elementHandler, lowerBound)
+        {
+            charArrayHandler = new Lazy<ArrayHandler<char[]>>(()=> { return new ArrayHandler<char[]>(ElementHandler); });
+        }
+
+        public StringArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler) : this(elementHandler, 1) { }
+
+        protected internal override async ValueTask<TArray> Read<TArray>(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription = null)
+        {
+            var t = typeof(TArray);
+            if (!t.IsArray)
+                throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+
+            // Getting an array
+
+            // We need to treat this as an actual array type, these need special treatment because of
+            // typing/generics reasons (there is no way to express "array of X" with generics
+            var elementType = t.GetElementType();
+            var elementFieldType = GetElementFieldType();
+            if (elementType == elementFieldType)
+                return (TArray)await ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == GetElementPsvType())
+                return (TArray)await ReadPsvAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(char[]))
+                return (TArray)(object)await charArrayHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+        }
+    }
+    class NumericArrayHandler<TDefaultElement> : ArrayHandler<TDefaultElement>
+        where TDefaultElement : struct
+    {
+        private Lazy<ArrayHandler<byte>> byteHandler;
+        private Lazy<ArrayHandler<sbyte>> sbyteHandler;
+        private Lazy<ArrayHandler<short>> shortHandler;
+        private Lazy<ArrayHandler<int>> intHandler;
+        private Lazy<ArrayHandler<long>> longHandler;
+        private Lazy<ArrayHandler<float>> floatHandler;
+        private Lazy<ArrayHandler<double>> doubleHandler;
+        private Lazy<ArrayHandler<decimal>> decimalHandler;
+        private Lazy<ArrayHandler<string>> stringHandler;
+
+        public NumericArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler, int lowerBound) : base(elementHandler, lowerBound)
+        {
+            byteHandler = new Lazy<ArrayHandler<byte>>(InitializeArrayHandler<byte>);
+            sbyteHandler = new Lazy<ArrayHandler<sbyte>>(InitializeArrayHandler<sbyte>);
+            shortHandler = new Lazy<ArrayHandler<short>>(InitializeArrayHandler<short>);
+            intHandler = new Lazy<ArrayHandler<int>>(InitializeArrayHandler<int>);
+            longHandler = new Lazy<ArrayHandler<long>>(InitializeArrayHandler<long>);
+            floatHandler = new Lazy<ArrayHandler<float>>(InitializeArrayHandler<float>);
+            doubleHandler = new Lazy<ArrayHandler<double>>(InitializeArrayHandler<double>);
+            decimalHandler = new Lazy<ArrayHandler<decimal>>(InitializeArrayHandler<decimal>);
+            stringHandler = new Lazy<ArrayHandler<string>>(InitializeArrayHandler<string>);
+        }
+
+        public NumericArrayHandler([CanBeNull] NpgsqlTypeHandler elementHandler) : this(elementHandler, 1) {}
+
+        private ArrayHandler<T> InitializeArrayHandler<T>()
+        {
+            return new ArrayHandler<T>(ElementHandler);
+        }
+
+        protected internal override async ValueTask<TArray> Read<TArray>(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription = null)
+        {
+            var t = typeof(TArray);
+            if (!t.IsArray)
+                throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+            var elementType = t.GetElementType();
+            var elementFieldType = GetElementFieldType();
+
+            if (elementType == elementFieldType)
+                return (TArray)await ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(byte))
+                return (TArray)(object)await byteHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(sbyte))
+                return (TArray)(object)await sbyteHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(short))
+                return (TArray)(object)await shortHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(int))
+                return (TArray)(object)await intHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(long))
+                return (TArray)(object)await longHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(float))
+                return (TArray)(object)await floatHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(double))
+                return (TArray)(object)await doubleHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(decimal))
+                return (TArray)(object)await decimalHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+            if (elementType == typeof(string))
+                return (TArray)(object)await stringHandler.Value.ReadAsObject(buf, len, async, fieldDescription);
+
+            throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
+        }
+    }
+    
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/arrays.html
     /// </remarks>

@@ -35,17 +35,39 @@ namespace Npgsql.TypeHandlers.NumericHandlers
     /// http://www.postgresql.org/docs/current/static/datatype-money.html
     /// </remarks>
     [TypeMapping("money", NpgsqlDbType.Money, dbType: DbType.Currency)]
-    class MoneyHandler : NpgsqlSimpleTypeHandler<decimal>
+    class MoneyHandler : NpgsqlSimpleTypeHandler<decimal>, INpgsqlSimpleTypeHandler<IConvertible>
     {
         public override decimal Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
             => buf.ReadInt64() / 100m;
 
-        public override int ValidateAndGetLength(decimal value, NpgsqlParameter parameter)
+        IConvertible INpgsqlSimpleTypeHandler<IConvertible>.Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription)
+            => Read(buf, len, fieldDescription);
+
+        static int ValidateAndGetLength(decimal value)
             => value < -92233720368547758.08M || value > 92233720368547758.07M
                 ? throw new OverflowException($"The supplied value ({value}) is outside the range for a PostgreSQL money value.")
                 : 8;
 
-        public override void Write(decimal value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
+        public override int ValidateAndGetLength(decimal value, NpgsqlParameter parameter)
+            => ValidateAndGetLength(value);
+
+        public int ValidateAndGetLength(IConvertible value, NpgsqlParameter parameter)
+        {
+            if (parameter == null)
+                throw CreateConversionButNoParamException(value.GetType());
+
+            var converted = Convert.ToDecimal(value);
+            parameter.ConvertedValue = converted;
+            return ValidateAndGetLength(converted);
+        }
+
+        static void Write(decimal value, NpgsqlWriteBuffer buf)
             => buf.WriteInt64((long)(Math.Round(value, 2, MidpointRounding.AwayFromZero) * 100m));
+
+        public override void Write(decimal value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
+            => Write(value, buf);
+
+        public void Write(IConvertible value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
+            => Write((decimal)parameter.ConvertedValue, buf);
     }
 }

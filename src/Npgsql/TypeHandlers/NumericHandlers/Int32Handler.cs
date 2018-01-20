@@ -42,6 +42,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         INpgsqlSimpleTypeHandler<float>, INpgsqlSimpleTypeHandler<double>, INpgsqlSimpleTypeHandler<decimal>,
         INpgsqlSimpleTypeHandler<string>
     {
+        private const int Int4Length = 4;
+
         #region Read
 
         public override int Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -72,13 +74,13 @@ namespace Npgsql.TypeHandlers.NumericHandlers
 
         #region Write
 
-        public override int ValidateAndGetLength(int value, NpgsqlParameter parameter) => 4;
-        public int ValidateAndGetLength(short value, NpgsqlParameter parameter)        => 4;
-        public int ValidateAndGetLength(long value, NpgsqlParameter parameter)         => 4;
-        public int ValidateAndGetLength(float value, NpgsqlParameter parameter)        => 4;
-        public int ValidateAndGetLength(double value, NpgsqlParameter parameter)       => 4;
-        public int ValidateAndGetLength(decimal value, NpgsqlParameter parameter)      => 4;
-        public int ValidateAndGetLength(byte value, NpgsqlParameter parameter)         => 4;
+        public override int ValidateAndGetLength(int value, NpgsqlParameter parameter) => Int4Length;
+        public int ValidateAndGetLength(short value, NpgsqlParameter parameter)        => Int4Length;
+        public int ValidateAndGetLength(long value, NpgsqlParameter parameter)         => Int4Length;
+        public int ValidateAndGetLength(float value, NpgsqlParameter parameter)        => Int4Length;
+        public int ValidateAndGetLength(double value, NpgsqlParameter parameter)       => Int4Length;
+        public int ValidateAndGetLength(decimal value, NpgsqlParameter parameter)      => Int4Length;
+        public int ValidateAndGetLength(byte value, NpgsqlParameter parameter) => Int4Length;
 
         public int ValidateAndGetLength(string value, NpgsqlParameter parameter)
         {
@@ -110,5 +112,8 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         }
 
         #endregion Write
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new NumericArrayHandler<int>(this) { PostgresType = arrayBackendType };
     }
 }
