@@ -36,7 +36,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("line", NpgsqlDbType.Line, typeof(NpgsqlLine))]
+    [TypeMapping("line", NpgsqlDbType.Line, new[] { typeof(NpgsqlLine), typeof(NpgsqlLine?) })]
     class LineHandler : NpgsqlSimpleTypeHandler<NpgsqlLine>
     {
         public override NpgsqlLine Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -51,5 +51,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
             buf.WriteDouble(value.B);
             buf.WriteDouble(value.C);
         }
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlLine>(this) { PostgresType = arrayBackendType };
     }
 }

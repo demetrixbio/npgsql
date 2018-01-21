@@ -512,19 +512,19 @@ namespace Npgsql.Tests.Types
             new object[] { "numeric", typeof(decimal?[]), null, new Type[] { }, new Type[] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
             new object[] { "money", typeof(decimal?[]), null, new Type[] { }, new Type[] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
             new object[] { "text", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
-            //new object[] { "varchar", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { "A", "B" } },
-            //new object[] { "char", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { "A", "B" } },
-            //new object[] { "citext", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { "A", "B" } },
-            //new object[] { "json", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { false, true } },
-            //new object[] { "jsonb", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { false, true } },
-            //new object[] { "xml", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { false, true } },
-            //new object[] { "point", typeof(NpgsqlPoint[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(NpgsqlPoint[]) }, new [] { false, true } },
-            //new object[] { "lseg", typeof(NpgsqlLSeg[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(NpgsqlLSeg[]) }, new [] { false, true } },
-            //new object[] { "path", typeof(NpgsqlPath[]), null, new Type[] {  }, new Type[] { typeof(NpgsqlPath[]) }, new [] { false, true } },
-            //new object[] { "polygon", typeof(NpgsqlPolygon[]), null, new Type[] {  }, new Type[] { typeof(NpgsqlPolygon[]) }, new [] { false, true } },
-            //new object[] { "line", typeof(NpgsqlLine[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(NpgsqlLine[]) }, new [] { false, true } },
-            //new object[] { "circle", typeof(NpgsqlCircle[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(NpgsqlCircle[]) }, new [] { false, true } },
-            //new object[] { "box", typeof(NpgsqlBox[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(NpgsqlBox[]) }, new [] { false, true } },
+            new object[] { "varchar", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "char", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "citext", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "json", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "0", "1", null } },
+            new object[] { "jsonb", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "0", "1", null } },
+            new object[] { "xml", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "<foo>bar</foo>", "<bar>foo</bar>", null } },
+            new object[] { "point", typeof(NpgsqlPoint?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPoint?[]) }, new NpgsqlPoint?[] { new NpgsqlPoint(0,0), new NpgsqlPoint(1,1), null } },
+            new object[] { "lseg", typeof(NpgsqlLSeg?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlLSeg?[]) }, new NpgsqlLSeg?[] { new NpgsqlLSeg(0d,0d,1d,1d), new NpgsqlLSeg(2d,2d,3d,3d), null } },
+            new object[] { "path", typeof(NpgsqlPath?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPath?[]) }, new NpgsqlPath?[] { new NpgsqlPath(new NpgsqlPoint(0,0), new NpgsqlPoint(1,1)), new NpgsqlPath(new NpgsqlPoint(2,2), new NpgsqlPoint(3,3)), null } },
+            new object[] { "polygon", typeof(NpgsqlPolygon?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPolygon?[]) }, new NpgsqlPolygon?[] { new NpgsqlPolygon(new NpgsqlPoint(0,0), new NpgsqlPoint(1,1)), new NpgsqlPolygon(new NpgsqlPoint(2,2), new NpgsqlPoint(3,3)), null } },
+            new object[] { "line", typeof(NpgsqlLine?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlLine?[]) }, new NpgsqlLine?[] { new NpgsqlLine(0d,1d,2d), new NpgsqlLine(3d,4d,5d), null } },
+            new object[] { "circle", typeof(NpgsqlCircle?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlCircle?[]) }, new NpgsqlCircle?[] { new NpgsqlCircle(0d,0d,1d), new NpgsqlCircle(2d,2d,3d), null } },
+            new object[] { "box", typeof(NpgsqlBox?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlBox?[]) }, new NpgsqlBox?[] { new NpgsqlBox(3d,2d,1d,0d), new NpgsqlBox(7d,6d,5d,4d), null } },
             //new object[] { "varbit", typeof(BitArray[]), null, new Type[] {  }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
             //new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(IDictionary<string[]), typeof(string>[]) }, new [] { false, true } },
             //new object[] { "uuid", typeof(Guid[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(Guid[]), typeof(string[]) }, new [] { false, true } },
@@ -568,7 +568,12 @@ namespace Npgsql.Tests.Types
                     insert.Parameters.Add(new NpgsqlParameter("p1", NpgsqlDbType.Array | _npgsqlDbType[postgreSQLType]) { Value = inValue });
                     insert.ExecuteNonQuery();
                     insert.Parameters.Clear();
-                    if(t == defaultType || Nullable.GetUnderlyingType(t.GetElementType()) == defaultElementType)
+
+                    // in the following we test if inferring the data type from the .Net type works
+                    // which it doesn't for some types by design
+                    if( !(postgreSQLType == "json" || postgreSQLType == "jsonb" || postgreSQLType == "xml")
+                        &&
+                        t == defaultType || Nullable.GetUnderlyingType(t.GetElementType()) == defaultElementType)
                     {
                         insert.Parameters.Add(new NpgsqlParameter { ParameterName = "p1", Value = inValue });
                         insert.ExecuteNonQuery();

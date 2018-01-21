@@ -22,6 +22,7 @@
 #endregion
 
 using Npgsql.BackendMessages;
+using Npgsql.PostgresTypes;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
 using NpgsqlTypes;
@@ -34,7 +35,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("lseg", NpgsqlDbType.LSeg, typeof(NpgsqlLSeg))]
+    [TypeMapping("lseg", NpgsqlDbType.LSeg, new[] { typeof(NpgsqlLSeg), typeof(NpgsqlLSeg?) })]
     class LineSegmentHandler : NpgsqlSimpleTypeHandler<NpgsqlLSeg>
     {
         public override NpgsqlLSeg Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -50,5 +51,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
             buf.WriteDouble(value.End.X);
             buf.WriteDouble(value.End.Y);
         }
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlLSeg>(this) { PostgresType = arrayBackendType };
     }
 }

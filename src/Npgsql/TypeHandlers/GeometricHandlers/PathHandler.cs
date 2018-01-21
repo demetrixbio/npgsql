@@ -38,7 +38,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("path", NpgsqlDbType.Path, typeof(NpgsqlPath))]
+    [TypeMapping("path", NpgsqlDbType.Path, new[] { typeof(NpgsqlPath), typeof(NpgsqlPath?) })]
     class PathHandler : NpgsqlTypeHandler<NpgsqlPath>
     {
         #region Read
@@ -94,5 +94,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
         }
 
         #endregion
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlPath>(this) { PostgresType = arrayBackendType };
     }
 }

@@ -22,6 +22,7 @@
 #endregion
 
 using Npgsql.BackendMessages;
+using Npgsql.PostgresTypes;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
 using NpgsqlTypes;
@@ -34,7 +35,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("box", NpgsqlDbType.Box, typeof(NpgsqlBox))]
+    [TypeMapping("box", NpgsqlDbType.Box, new[] { typeof(NpgsqlBox), typeof(NpgsqlBox?) })]
     class BoxHandler : NpgsqlSimpleTypeHandler<NpgsqlBox>
     {
         public override NpgsqlBox Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -53,5 +54,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
             buf.WriteDouble(value.Left);
             buf.WriteDouble(value.Bottom);
         }
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlBox>(this) { PostgresType = arrayBackendType };
     }
 }

@@ -36,7 +36,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("circle", NpgsqlDbType.Circle, typeof(NpgsqlCircle))]
+    [TypeMapping("circle", NpgsqlDbType.Circle, new[] { typeof(NpgsqlCircle), typeof(NpgsqlCircle?) })]
     class CircleHandler : NpgsqlSimpleTypeHandler<NpgsqlCircle>
     {
         public override NpgsqlCircle Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -51,5 +51,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
             buf.WriteDouble(value.Y);
             buf.WriteDouble(value.Radius);
         }
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlCircle>(this) { PostgresType = arrayBackendType };
     }
 }

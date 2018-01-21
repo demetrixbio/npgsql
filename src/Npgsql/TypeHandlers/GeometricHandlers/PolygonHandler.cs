@@ -37,7 +37,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("polygon", NpgsqlDbType.Polygon, typeof(NpgsqlPolygon))]
+    [TypeMapping("polygon", NpgsqlDbType.Polygon, new[] { typeof(NpgsqlPolygon), typeof(NpgsqlPolygon?) })]
     class PolygonHandler : NpgsqlTypeHandler<NpgsqlPolygon>
     {
         #region Read
@@ -78,5 +78,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
         }
 
         #endregion
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlPolygon>(this) { PostgresType = arrayBackendType };
     }
 }

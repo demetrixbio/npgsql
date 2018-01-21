@@ -36,7 +36,7 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-geometric.html
     /// </remarks>
-    [TypeMapping("point", NpgsqlDbType.Point, typeof(NpgsqlPoint))]
+    [TypeMapping("point", NpgsqlDbType.Point, new[] { typeof(NpgsqlPoint), typeof(NpgsqlPoint?) })]
     class PointHandler : NpgsqlSimpleTypeHandler<NpgsqlPoint>
     {
         public override NpgsqlPoint Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -50,5 +50,8 @@ namespace Npgsql.TypeHandlers.GeometricHandlers
             buf.WriteDouble(value.X);
             buf.WriteDouble(value.Y);
         }
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<NpgsqlPoint>(this) { PostgresType = arrayBackendType };
     }
 }
