@@ -355,6 +355,37 @@ namespace Npgsql.Tests.Types
             }
         }
 
+
+        static object[][] _overflowTests = new[] {
+            new object[] { NpgsqlDbType.Smallint, 1 + short.MaxValue },
+            new object[] { NpgsqlDbType.Smallint, 1L + short.MaxValue },
+            new object[] { NpgsqlDbType.Smallint, 1F + short.MaxValue },
+            new object[] { NpgsqlDbType.Smallint, 1D + short.MaxValue },
+            new object[] { NpgsqlDbType.Integer, 1L + int.MaxValue },
+            new object[] { NpgsqlDbType.Integer, 1F + int.MaxValue },
+            new object[] { NpgsqlDbType.Integer, 1D + int.MaxValue },
+            new object[] { NpgsqlDbType.Bigint, 1F + long.MaxValue },
+            new object[] { NpgsqlDbType.Bigint, 1D + long.MaxValue },
+        };
+
+        [Test, Description("Tests handling of numeric overflow")]
+        [TestCaseSource(nameof(_overflowTests))]
+        public void Overflow(NpgsqlDbType type, object value)
+        {
+            using (var conn = OpenConnection())
+            using (var cmd = new NpgsqlCommand("SELECT @p1", conn))
+            {
+                var p1 = new NpgsqlParameter("p1", type);
+                p1.Value = value;
+                cmd.Parameters.Add(p1);
+                Assert.Throws<OverflowException>(() =>
+                {
+                    using (var reader = cmd.ExecuteReader()) { }
+                });
+            }
+        }
+
+
         // Older tests
 
         [Test]

@@ -94,13 +94,13 @@ namespace Npgsql.TypeHandlers.NumericHandlers
         public void Write(short value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteInt32(value);
         public void Write(long value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
-            => buf.WriteInt32((int)value);
+            => buf.WriteInt32(checked((int)value));
         public void Write(byte value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteInt32(value);
         public void Write(float value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
-            => buf.WriteInt32((int)value);
+            => buf.WriteInt32(checked((int)value));
         public void Write(double value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
-            => buf.WriteInt32((int)value);
+            => buf.WriteInt32(checked((int)value));
         public void Write(decimal value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
             => buf.WriteInt32((int)value);
         public void Write(string value, NpgsqlWriteBuffer buf, NpgsqlParameter parameter)
