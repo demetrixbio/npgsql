@@ -29,6 +29,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Npgsql.PostgresTypes;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
 using NpgsqlTypes;
@@ -504,6 +505,11 @@ namespace Npgsql
         [CanBeNull]
         public NpgsqlParameterCollection Collection { get; set; }
 #pragma warning restore CA2227
+
+        /// <summary>
+        /// The PostgreSQL data type as discovered from pg_type
+        /// </summary>
+        public PostgresType PostgresType { get; internal set; }
 
         #endregion Other Properties
 

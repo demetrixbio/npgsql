@@ -456,10 +456,11 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                 {
                     var param = new NpgsqlParameter();
 
-                    (var npgsqlDbType, var dataTypeName) =
+                    (var npgsqlDbType, var postgresType, var dataTypeName) =
                         c.Connection.Connector.TypeMapper.GetTypeInfoByOid(types[i]);
 
                     param.DataTypeName = dataTypeName;
+                    param.PostgresType = postgresType;
                     if (npgsqlDbType.HasValue)
                         param.NpgsqlDbType = npgsqlDbType.Value;
 
@@ -526,12 +527,13 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                             var param = statement.InputParameters[i];
                             var paramOid = paramTypeOIDs[i];
 
-                            (var npgsqlDbType, var dataTypeName) = connector.TypeMapper.GetTypeInfoByOid(paramOid);
+                            (var npgsqlDbType, var postgresType, var dataTypeName) = connector.TypeMapper.GetTypeInfoByOid(paramOid);
 
                             if (param.NpgsqlDbType != NpgsqlDbType.Unknown && param.NpgsqlDbType != npgsqlDbType)
                                 throw new NpgsqlException("The backend parser inferred different types for parameters with the same name. Please try explicit casting within your SQL statement or batch or use different placeholder names.");
 
                             param.DataTypeName = dataTypeName;
+                            param.PostgresType = postgresType;
                             if (npgsqlDbType.HasValue)
                                 param.NpgsqlDbType = npgsqlDbType.Value;
                         }
