@@ -476,7 +476,7 @@ namespace Npgsql.Tests.Types
             { "circle", NpgsqlDbType.Circle },
             { "box", NpgsqlDbType.Box },
             { "bit", NpgsqlDbType.Bit },
-            { "bit(1)", NpgsqlDbType.Bit },
+            { "bit(2)", NpgsqlDbType.Bit },
             { "varbit", NpgsqlDbType.Varbit },
             { "hstore", NpgsqlDbType.Hstore },
             { "uuid", NpgsqlDbType.Uuid },
@@ -527,6 +527,8 @@ namespace Npgsql.Tests.Types
             new object[] { "circle", typeof(NpgsqlCircle?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlCircle?[]) }, new NpgsqlCircle?[] { new NpgsqlCircle(0d,0d,1d), new NpgsqlCircle(2d,2d,3d), null } },
             new object[] { "box", typeof(NpgsqlBox?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlBox?[]) }, new NpgsqlBox?[] { new NpgsqlBox(3d,2d,1d,0d), new NpgsqlBox(7d,6d,5d,4d), null } },
             new object[] { "varbit", typeof(BitArray[]), null, new Type[] { }, new Type[] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
+            new object[] { "bit(2)", typeof(BitArray[]), null, new Type[] { }, new Type[] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
+            //new object[] { "bit", typeof(bool[]), null, new Type[] { typeof(BitArray[]) }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
             new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { }, new Type[] { typeof(IDictionary<string, string>[]) }, new [] { new Dictionary<string, string> { { "foo", "bar" } }, new Dictionary<string, string> { { "bar", "foo" } }, null } },
             new object[] { "uuid", typeof(Guid?[]), null, new Type[] { }, new Type[] { typeof(Guid?[]) }, new Guid?[] { Guid.NewGuid(), Guid.NewGuid(), null } },
             //new object[] { "cidr", typeof(NpgsqlInet[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(IPAddress[]), typeof(NpgsqlInet[]) }, new [] { false, true } },
@@ -548,8 +550,6 @@ namespace Npgsql.Tests.Types
             //new object[] { "name", typeof(string[]), null, new Type[] { typeof(char[][]) }, new Type[] { typeof(string[]), typeof(char[][]), typeof(char[]), typeof(IConvertible[]) }, new [] { false, true } },
             //new object[] { "char", typeof(char[]), null, new Type[] { typeof(byte[]), typeof(short[]), typeof(int[]), typeof(long[]) }, new Type[] { typeof(byte[]), typeof(IConvertible[]) }, new [] { false, true } },
             //new object[] { "geometry", typeof(PostgisGeometry[]), null, new Type[] {  }, new Type[] { typeof(PostgisGeometry[]) }, new [] { false, true } },
-            //new object[] { "bit(1)", typeof(bool[]), null, new Type[] { typeof(BitArray[]) }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
-            //new object[] { "bit(2)", typeof(BitArray[]), null, new Type[] {  }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
         };
 
         [Test, Explicit("Testing of all possible data types is quite extensive"), Description("Roundtrips a one dimensional array that contains null values")]
