@@ -48,10 +48,10 @@ namespace Npgsql.TypeHandlers.NumericHandlers
             => buf.ReadInt16();
 
         byte INpgsqlSimpleTypeHandler<byte>.Read(NpgsqlReadBuffer buf, int len, [CanBeNull] FieldDescription fieldDescription)
-            => (byte)Read(buf, len, fieldDescription);
+            => checked((byte)Read(buf, len, fieldDescription));
 
         sbyte INpgsqlSimpleTypeHandler<sbyte>.Read(NpgsqlReadBuffer buf, int len, [CanBeNull] FieldDescription fieldDescription)
-            => (sbyte)Read(buf, len, fieldDescription);
+            => checked((sbyte)Read(buf, len, fieldDescription));
 
         int INpgsqlSimpleTypeHandler<int>.Read(NpgsqlReadBuffer buf, int len, [CanBeNull] FieldDescription fieldDescription)
             => Read(buf, len, fieldDescription);

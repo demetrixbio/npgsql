@@ -28,6 +28,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using Npgsql;
@@ -355,28 +356,25 @@ namespace Npgsql.Tests.Types
             }
         }
 
-
-        static object[][] _overflowTests = new[] {
-            new object[] { NpgsqlDbType.Smallint, 1 + short.MaxValue },
-            new object[] { NpgsqlDbType.Smallint, 1L + short.MaxValue },
-            new object[] { NpgsqlDbType.Smallint, 1F + short.MaxValue },
-            new object[] { NpgsqlDbType.Smallint, 1D + short.MaxValue },
-            new object[] { NpgsqlDbType.Integer, 1L + int.MaxValue },
-            new object[] { NpgsqlDbType.Integer, 1F + int.MaxValue },
-            new object[] { NpgsqlDbType.Integer, 1D + int.MaxValue },
-            new object[] { NpgsqlDbType.Bigint, 1F + long.MaxValue },
-            new object[] { NpgsqlDbType.Bigint, 1D + long.MaxValue },
-        };
-
-        [Test, Description("Tests handling of numeric overflow")]
-        [TestCaseSource(nameof(_overflowTests))]
-        public void Overflow(NpgsqlDbType type, object value)
+        [Test, Description("Tests handling of numeric overflow when writing data")]
+        [TestCase(NpgsqlDbType.Smallint, 1 + short.MaxValue)]
+        [TestCase(NpgsqlDbType.Smallint, 1L + short.MaxValue)]
+        [TestCase(NpgsqlDbType.Smallint, 1F + short.MaxValue)]
+        [TestCase(NpgsqlDbType.Smallint, 1D + short.MaxValue)]
+        [TestCase(NpgsqlDbType.Integer, 1L + int.MaxValue)]
+        [TestCase(NpgsqlDbType.Integer, 1F + int.MaxValue)]
+        [TestCase(NpgsqlDbType.Integer, 1D + int.MaxValue)]
+        [TestCase(NpgsqlDbType.Bigint, 1F + long.MaxValue)]
+        [TestCase(NpgsqlDbType.Bigint, 1D + long.MaxValue)]
+        public void WriteOverflow(NpgsqlDbType type, object value)
         {
             using (var conn = OpenConnection())
             using (var cmd = new NpgsqlCommand("SELECT @p1", conn))
             {
-                var p1 = new NpgsqlParameter("p1", type);
-                p1.Value = value;
+                var p1 = new NpgsqlParameter("p1", type)
+                {
+                    Value = value
+                };
                 cmd.Parameters.Add(p1);
                 Assert.Throws<OverflowException>(() =>
                 {
@@ -385,10 +383,62 @@ namespace Npgsql.Tests.Types
             }
         }
 
+        [Test, Description("Tests handling of numeric overflow when reading data")]
+        [TestCase(NpgsqlDbType.Smallint, 1D + byte.MaxValue, typeof(byte))]
+        [TestCase(NpgsqlDbType.Smallint, 1D + sbyte.MaxValue, typeof(sbyte))]
+        [TestCase(NpgsqlDbType.Integer, 1D + byte.MaxValue, typeof(byte))]
+        [TestCase(NpgsqlDbType.Integer, 1D + short.MaxValue, typeof(short))]
+        [TestCase(NpgsqlDbType.Bigint, 1D + byte.MaxValue, typeof(byte))]
+        [TestCase(NpgsqlDbType.Bigint, 1D + short.MaxValue, typeof(short))]
+        [TestCase(NpgsqlDbType.Bigint, 1D + int.MaxValue, typeof(int))]
+        public void ReadOverflow(NpgsqlDbType type, double value, Type readAs)
+        {
+            var typeString = GetTypeAsString(type);
+            using (var conn = OpenConnection())
+            using (var cmd = new NpgsqlCommand($"SELECT {value}::{typeString}", conn))
+            {
+                Assert.Throws<OverflowException>(() =>
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        Assert.True(reader.Read());
+                        GetFieldValue(reader, readAs, 0);
+                    }
+                });
+            }
 
-        // Older tests
+            string GetTypeAsString(NpgsqlDbType dbType)
+            {
+                switch (dbType)
+                {
+                case NpgsqlDbType.Smallint:
+                    return "int2";
+                case NpgsqlDbType.Integer:
+                    return "int4";
+                case NpgsqlDbType.Bigint:
+                    return "int8";
+                default:
+                    throw new NotSupportedException();
+                }
+            }
 
-        [Test]
+            void GetFieldValue(NpgsqlDataReader reader, Type typeArg, int ordinal)
+            {
+                var getFieldValueMethod = typeof(NpgsqlDataReader).GetMethod(nameof(GetFieldValue)) ?? throw new MissingMethodException(nameof(NpgsqlDataReader), nameof(NpgsqlDataReader.GetFieldValue));
+                try
+                {
+                    getFieldValueMethod.MakeGenericMethod(typeArg).Invoke(reader, new object[] { ordinal });
+                }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException ?? ex;
+                }
+            }
+        }
+
+    // Older tests
+
+    [Test]
         public void DoubleWithoutPrepared()
         {
             using (var conn = OpenConnection())
