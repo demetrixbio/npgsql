@@ -476,6 +476,7 @@ namespace Npgsql.Tests.Types
             { "circle", NpgsqlDbType.Circle },
             { "box", NpgsqlDbType.Box },
             { "bit", NpgsqlDbType.Bit },
+            { "bit(1)", NpgsqlDbType.Bit },
             { "varbit", NpgsqlDbType.Varbit },
             { "hstore", NpgsqlDbType.Hstore },
             { "uuid", NpgsqlDbType.Uuid },
@@ -525,9 +526,9 @@ namespace Npgsql.Tests.Types
             new object[] { "line", typeof(NpgsqlLine?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlLine?[]) }, new NpgsqlLine?[] { new NpgsqlLine(0d,1d,2d), new NpgsqlLine(3d,4d,5d), null } },
             new object[] { "circle", typeof(NpgsqlCircle?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlCircle?[]) }, new NpgsqlCircle?[] { new NpgsqlCircle(0d,0d,1d), new NpgsqlCircle(2d,2d,3d), null } },
             new object[] { "box", typeof(NpgsqlBox?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlBox?[]) }, new NpgsqlBox?[] { new NpgsqlBox(3d,2d,1d,0d), new NpgsqlBox(7d,6d,5d,4d), null } },
-            //new object[] { "varbit", typeof(BitArray[]), null, new Type[] {  }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
-            //new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(IDictionary<string[]), typeof(string>[]) }, new [] { false, true } },
-            //new object[] { "uuid", typeof(Guid[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(Guid[]), typeof(string[]) }, new [] { false, true } },
+            new object[] { "varbit", typeof(BitArray[]), null, new Type[] { }, new Type[] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
+            new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { }, new Type[] { typeof(IDictionary<string, string>[]) }, new [] { new Dictionary<string, string> { { "foo", "bar" } }, new Dictionary<string, string> { { "bar", "foo" } }, null } },
+            new object[] { "uuid", typeof(Guid?[]), null, new Type[] { }, new Type[] { typeof(Guid?[]) }, new Guid?[] { Guid.NewGuid(), Guid.NewGuid(), null } },
             //new object[] { "cidr", typeof(NpgsqlInet[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(IPAddress[]), typeof(NpgsqlInet[]) }, new [] { false, true } },
             //new object[] { "inet", typeof(IPAddress[]), typeof(NpgsqlInet), new Type[] { typeof(string[]) }, new Type[] { typeof(IPAddress[]), typeof(NpgsqlInet[]) }, new [] { false, true } },
             //new object[] { "macaddr", typeof(PhysicalAddress[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(PhysicalAddress[]) }, new [] { false, true } },
@@ -564,7 +565,7 @@ namespace Npgsql.Tests.Types
                 var insert = new NpgsqlCommand("INSERT INTO mytable(val) VALUES(@p1)", conn);
                 foreach (Type t in inputTypes)
                 {
-                    Array inValue = ConvertElements(input, t.GetElementType());
+                    var inValue = ConvertElements(input, t.GetElementType());
                     insert.Parameters.Add(new NpgsqlParameter("p1", NpgsqlDbType.Array | _npgsqlDbType[postgreSQLType]) { Value = inValue });
                     insert.ExecuteNonQuery();
                     insert.Parameters.Clear();
@@ -591,37 +592,44 @@ namespace Npgsql.Tests.Types
                     do
                     {
 
-                        Array expextedDefaultOutValue = ConvertElements(input, defaultType.GetElementType());
+                        var expextedDefaultOutValue = ConvertElements(input, defaultType.GetElementType());
                         var value = reader.GetValue(0);
-                        Assert.That(value, Is.TypeOf(defaultType));
+                        ConditionalTypeAssert(value, defaultType);
                         Assert.That(value, Is.EqualTo(expextedDefaultOutValue));
 
                         var providerSpecificValue = reader.GetProviderSpecificValue(0);
                         if (providerSpecificType != null)
                         {
-                            Array expextedProviderSpecificOutValue = ConvertElements(input, providerSpecificType.GetElementType());
-                            Assert.That(providerSpecificValue, Is.TypeOf(providerSpecificType));
+                            var expextedProviderSpecificOutValue = ConvertElements(input, providerSpecificType.GetElementType());
+                            ConditionalTypeAssert(providerSpecificValue, providerSpecificType);
                             Assert.That(providerSpecificValue, Is.EqualTo(expextedProviderSpecificOutValue));
                         }
                         else
                         {
-                            Assert.That(providerSpecificValue, Is.TypeOf(defaultType));
+                            ConditionalTypeAssert(providerSpecificValue, defaultType);
                             Assert.That(providerSpecificValue, Is.EqualTo(expextedDefaultOutValue));
                         }
 
                         foreach (Type t in allTypes)
                         {
-                            Array expextedOutValue = ConvertElements(input, t.GetElementType());
+                            var expextedOutValue = ConvertElements(input, t.GetElementType());
                             var requestedValue = reader.GetFieldValueGeneric(t, 0);
-                            Assert.That(requestedValue, Is.TypeOf(t));
+                            ConditionalTypeAssert(requestedValue, t);
                             Assert.That(requestedValue, Is.EqualTo(expextedOutValue));
                         }
                     } while (reader.Read());
                 }
             }
+            void ConditionalTypeAssert(object value, Type expectedType)
+            {
+                if (expectedType.IsInterface || (expectedType.GetElementType()?.IsInterface ?? false))
+                    Assert.That(value, Is.AssignableTo(expectedType));
+                else
+                    Assert.That(value, Is.TypeOf(expectedType));
+            }
         }
 
-        private NpgsqlParameter CreateGenericParameter(Type typeArg, string parameterName, Array parameterValue)
+        private NpgsqlParameter CreateGenericParameter(Type typeArg, string parameterName, object parameterValue)
         {
             var genericParameterType = typeof(NpgsqlParameter<>).MakeGenericType(typeArg);
             var genericParameterConstructor = genericParameterType.GetConstructor(new[] { typeof(string), typeArg });
@@ -643,6 +651,10 @@ namespace Npgsql.Tests.Types
             }
             if (elementType == typeof(string) && targetType == typeof(char[]))
                 return source.ConvertAllMultidimensional<string, char[]>(e => e.ToCharArray());
+            if (elementType == typeof(bool[]) && targetType == typeof(BitArray))
+                return source.ConvertAllMultidimensional<bool[], BitArray>(e => e == null ? null : new BitArray(e));
+            if (elementType == typeof(Dictionary<string, string>) && targetType == typeof(IDictionary<string, string>))
+                return source.ConvertAllMultidimensional<Dictionary<string, string>, IDictionary<string, string>>(e => e);
 
             throw new NotImplementedException();
         }

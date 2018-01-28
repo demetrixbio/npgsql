@@ -100,14 +100,17 @@ namespace Npgsql.TypeHandlers
             // typing/generics reasons (there is no way to express "array of X" with generics
             var elementType = t.GetElementType();
             var elementFieldType = GetElementFieldType();
-            if (elementType == elementFieldType)
+            if (IsEqualOrCompatibleInterface(elementType, elementFieldType))
                 return (TArray)(object)await Read(buf, async, false);
-            if (Nullable.GetUnderlyingType(elementType) == elementFieldType)
+            if (IsEqualOrCompatibleInterface(Nullable.GetUnderlyingType(elementType), elementFieldType))
                 return (TArray)(object)await Read(buf, async, true);
-            if (elementType == GetElementPsvType())
+            if (IsEqualOrCompatibleInterface(elementType, GetElementPsvType()))
                 return (TArray)await ReadPsvAsObject(buf, len, async, fieldDescription);
             throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
         }
+
+        protected bool IsEqualOrCompatibleInterface(Type targetType, Type sourceType)
+            => (targetType?.IsInterface ?? false) ? targetType.IsAssignableFrom(sourceType) : targetType == sourceType;
 
         internal override object ReadAsObject(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription)
             => ReadAsObject(buf, len, false, fieldDescription).Result;

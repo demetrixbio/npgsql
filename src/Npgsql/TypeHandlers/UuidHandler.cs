@@ -27,13 +27,14 @@ using NpgsqlTypes;
 using System.Data;
 using Npgsql.TypeHandling;
 using Npgsql.TypeMapping;
+using Npgsql.PostgresTypes;
 
 namespace Npgsql.TypeHandlers
 {
     /// <remarks>
     /// http://www.postgresql.org/docs/current/static/datatype-uuid.html
     /// </remarks>
-    [TypeMapping("uuid", NpgsqlDbType.Uuid, DbType.Guid, typeof(Guid))]
+    [TypeMapping("uuid", NpgsqlDbType.Uuid, DbType.Guid, new[] { typeof(Guid), typeof(Guid?) })]
     class UuidHandler : NpgsqlSimpleTypeHandler<Guid>, INpgsqlSimpleTypeHandler<string>
     {
         public override Guid Read(NpgsqlReadBuffer buf, int len, FieldDescription fieldDescription = null)
@@ -77,5 +78,8 @@ namespace Npgsql.TypeHandlers
         }
 
         #endregion
+
+        internal override ArrayHandler CreateArrayHandler(PostgresType arrayBackendType)
+            => new ValueTypeArrayHandler<Guid>(this) { PostgresType = arrayBackendType };
     }
 }
