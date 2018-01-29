@@ -385,14 +385,14 @@ namespace Npgsql.Tests.Types
         }
 
         [Test, Description("Tests handling of numeric overflow when reading data")]
-        [TestCase(NpgsqlDbType.Smallint, 1D + byte.MaxValue, typeof(byte))]
-        [TestCase(NpgsqlDbType.Smallint, 1D + sbyte.MaxValue, typeof(sbyte))]
-        [TestCase(NpgsqlDbType.Integer, 1D + byte.MaxValue, typeof(byte))]
-        [TestCase(NpgsqlDbType.Integer, 1D + short.MaxValue, typeof(short))]
-        [TestCase(NpgsqlDbType.Bigint, 1D + byte.MaxValue, typeof(byte))]
-        [TestCase(NpgsqlDbType.Bigint, 1D + short.MaxValue, typeof(short))]
-        [TestCase(NpgsqlDbType.Bigint, 1D + int.MaxValue, typeof(int))]
-        public void ReadOverflow(NpgsqlDbType type, double value, Type readAs)
+        [TestCaseGeneric(NpgsqlDbType.Smallint, 1D + byte.MaxValue, TypeArguments = new[] { typeof(byte) })]
+        [TestCaseGeneric(NpgsqlDbType.Smallint, 1D + sbyte.MaxValue, TypeArguments = new[] { typeof(sbyte) })]
+        [TestCaseGeneric(NpgsqlDbType.Integer, 1D + byte.MaxValue, TypeArguments = new[] { typeof(byte) })]
+        [TestCaseGeneric(NpgsqlDbType.Integer, 1D + short.MaxValue, TypeArguments = new[] { typeof(short) })]
+        [TestCaseGeneric(NpgsqlDbType.Bigint, 1D + byte.MaxValue, TypeArguments = new[] { typeof(byte) })]
+        [TestCaseGeneric(NpgsqlDbType.Bigint, 1D + short.MaxValue, TypeArguments = new[] { typeof(short) })]
+        [TestCaseGeneric(NpgsqlDbType.Bigint, 1D + int.MaxValue, TypeArguments = new[] { typeof(int) })]
+        public void ReadOverflow<T>(NpgsqlDbType type, double value)
         {
             var typeString = GetTypeAsString(type);
             using (var conn = OpenConnection())
@@ -403,7 +403,7 @@ namespace Npgsql.Tests.Types
                     using (var reader = cmd.ExecuteReader())
                     {
                         Assert.True(reader.Read());
-                        GetFieldValue(reader, readAs, 0);
+                        reader.GetFieldValue<T>(0);
                     }
                 });
             }
@@ -420,19 +420,6 @@ namespace Npgsql.Tests.Types
                         return "int8";
                     default:
                         throw new NotSupportedException();
-                }
-            }
-
-            void GetFieldValue(NpgsqlDataReader reader, Type typeArg, int ordinal)
-            {
-                var getFieldValueMethod = typeof(NpgsqlDataReader).GetMethod(nameof(GetFieldValue)) ?? throw new MissingMethodException(nameof(NpgsqlDataReader), nameof(NpgsqlDataReader.GetFieldValue));
-                try
-                {
-                    getFieldValueMethod.MakeGenericMethod(typeArg).Invoke(reader, new object[] { ordinal });
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException ?? ex;
                 }
             }
         }
