@@ -56,7 +56,7 @@ namespace Npgsql.Tests.Types
                 var p2 = new NpgsqlParameter("p2", DbType.Int16);
                 var p3 = new NpgsqlParameter("p3", DbType.Byte);
                 var p4 = new NpgsqlParameter { ParameterName = "p4", Value = (short)8 };
-                var p5 = new NpgsqlParameter { ParameterName = "p5", Value = (byte)8  };
+                var p5 = new NpgsqlParameter { ParameterName = "p5", Value = (byte)8 };
                 Assert.That(p4.NpgsqlDbType, Is.EqualTo(NpgsqlDbType.Smallint));
                 Assert.That(p4.DbType, Is.EqualTo(DbType.Int16));
                 cmd.Parameters.Add(p1);
@@ -108,26 +108,26 @@ namespace Npgsql.Tests.Types
 
                     for (var i = 0; i < cmd.Parameters.Count; i++)
                     {
-                        Assert.That(reader.GetInt32(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetInt64(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetInt16(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetByte(i),                  Is.EqualTo(8));
-                        Assert.That(reader.GetFloat(i),                 Is.EqualTo(8.0f));
-                        Assert.That(reader.GetDouble(i),                Is.EqualTo(8.0d));
-                        Assert.That(reader.GetDecimal(i),               Is.EqualTo(8.0m));
-                        Assert.That(reader.GetValue(i),                 Is.EqualTo(8));
+                        Assert.That(reader.GetInt32(i), Is.EqualTo(8));
+                        Assert.That(reader.GetInt64(i), Is.EqualTo(8));
+                        Assert.That(reader.GetInt16(i), Is.EqualTo(8));
+                        Assert.That(reader.GetByte(i), Is.EqualTo(8));
+                        Assert.That(reader.GetFloat(i), Is.EqualTo(8.0f));
+                        Assert.That(reader.GetDouble(i), Is.EqualTo(8.0d));
+                        Assert.That(reader.GetDecimal(i), Is.EqualTo(8.0m));
+                        Assert.That(reader.GetValue(i), Is.EqualTo(8));
                         Assert.That(reader.GetProviderSpecificValue(i), Is.EqualTo(8));
-                        Assert.That(reader.GetFieldType(i),             Is.EqualTo(typeof(int)));
-                        Assert.That(reader.GetDataTypeName(i),          Is.EqualTo("int4"));
+                        Assert.That(reader.GetFieldType(i), Is.EqualTo(typeof(int)));
+                        Assert.That(reader.GetDataTypeName(i), Is.EqualTo("int4"));
                     }
                 }
             }
         }
 
         [Test, Description("Tests some types which are aliased to UInt32")]
-        [TestCase(NpgsqlDbType.Oid, TestName="OID")]
-        [TestCase(NpgsqlDbType.Xid, TestName="XID")]
-        [TestCase(NpgsqlDbType.Cid, TestName="CID")]
+        [TestCase(NpgsqlDbType.Oid, TestName = "OID")]
+        [TestCase(NpgsqlDbType.Xid, TestName = "XID")]
+        [TestCase(NpgsqlDbType.Cid, TestName = "CID")]
         public void UInt32(NpgsqlDbType npgsqlDbType)
         {
             var expected = 8u;
@@ -164,17 +164,17 @@ namespace Npgsql.Tests.Types
 
                     for (var i = 0; i < cmd.Parameters.Count; i++)
                     {
-                        Assert.That(reader.GetInt64(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetInt16(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetInt32(i),                 Is.EqualTo(8));
-                        Assert.That(reader.GetByte(i),                  Is.EqualTo(8));
-                        Assert.That(reader.GetFloat(i),                 Is.EqualTo(8.0f));
-                        Assert.That(reader.GetDouble(i),                Is.EqualTo(8.0d));
-                        Assert.That(reader.GetDecimal(i),               Is.EqualTo(8.0m));
-                        Assert.That(reader.GetValue(i),                 Is.EqualTo(8));
+                        Assert.That(reader.GetInt64(i), Is.EqualTo(8));
+                        Assert.That(reader.GetInt16(i), Is.EqualTo(8));
+                        Assert.That(reader.GetInt32(i), Is.EqualTo(8));
+                        Assert.That(reader.GetByte(i), Is.EqualTo(8));
+                        Assert.That(reader.GetFloat(i), Is.EqualTo(8.0f));
+                        Assert.That(reader.GetDouble(i), Is.EqualTo(8.0d));
+                        Assert.That(reader.GetDecimal(i), Is.EqualTo(8.0m));
+                        Assert.That(reader.GetValue(i), Is.EqualTo(8));
                         Assert.That(reader.GetProviderSpecificValue(i), Is.EqualTo(8));
-                        Assert.That(reader.GetFieldType(i),             Is.EqualTo(typeof(long)));
-                        Assert.That(reader.GetDataTypeName(i),          Is.EqualTo("int8"));
+                        Assert.That(reader.GetFieldType(i), Is.EqualTo(typeof(long)));
+                        Assert.That(reader.GetDataTypeName(i), Is.EqualTo("int8"));
                     }
                 }
             }
@@ -189,7 +189,7 @@ namespace Npgsql.Tests.Types
                 const double expected = 4.123456789012345;
                 var p1 = new NpgsqlParameter("p1", NpgsqlDbType.Double);
                 var p2 = new NpgsqlParameter("p2", DbType.Double);
-                var p3 = new NpgsqlParameter {ParameterName = "p3", Value = expected};
+                var p3 = new NpgsqlParameter { ParameterName = "p3", Value = expected };
                 cmd.Parameters.Add(p1);
                 cmd.Parameters.Add(p2);
                 cmd.Parameters.Add(p3);
@@ -231,7 +231,7 @@ namespace Npgsql.Tests.Types
             {
                 var p1 = new NpgsqlParameter("p1", NpgsqlDbType.Real);
                 var p2 = new NpgsqlParameter("p2", DbType.Single);
-                var p3 = new NpgsqlParameter {ParameterName = "p3", Value = expected};
+                var p3 = new NpgsqlParameter { ParameterName = "p3", Value = expected };
                 cmd.Parameters.Add(p1);
                 cmd.Parameters.Add(p2);
                 cmd.Parameters.Add(p3);
@@ -308,22 +308,23 @@ namespace Npgsql.Tests.Types
                     cmd.Parameters.Add(p3);
                     cmd.Parameters.Add(p4);
                     p1.Value = p2.Value = p3.Value = 8;
-                    using (var reader = cmd.ExecuteReader()) {
+                    using (var reader = cmd.ExecuteReader())
+                    {
                         reader.Read();
 
                         for (var i = 0; i < cmd.Parameters.Count; i++)
                         {
-                            Assert.That(reader.GetDecimal(i),               Is.EqualTo(8.0m));
-                            Assert.That(reader.GetInt32(i),                 Is.EqualTo(8));
-                            Assert.That(reader.GetInt64(i),                 Is.EqualTo(8));
-                            Assert.That(reader.GetInt16(i),                 Is.EqualTo(8));
-                            Assert.That(reader.GetByte(i),                  Is.EqualTo(8));
-                            Assert.That(reader.GetFloat(i),                 Is.EqualTo(8.0f));
-                            Assert.That(reader.GetDouble(i),                Is.EqualTo(8.0d));
-                            Assert.That(reader.GetValue(i),                 Is.EqualTo(8));
+                            Assert.That(reader.GetDecimal(i), Is.EqualTo(8.0m));
+                            Assert.That(reader.GetInt32(i), Is.EqualTo(8));
+                            Assert.That(reader.GetInt64(i), Is.EqualTo(8));
+                            Assert.That(reader.GetInt16(i), Is.EqualTo(8));
+                            Assert.That(reader.GetByte(i), Is.EqualTo(8));
+                            Assert.That(reader.GetFloat(i), Is.EqualTo(8.0f));
+                            Assert.That(reader.GetDouble(i), Is.EqualTo(8.0d));
+                            Assert.That(reader.GetValue(i), Is.EqualTo(8));
                             Assert.That(reader.GetProviderSpecificValue(i), Is.EqualTo(8));
-                            Assert.That(reader.GetFieldType(i),             Is.EqualTo(typeof(decimal)));
-                            Assert.That(reader.GetDataTypeName(i),          Is.EqualTo("numeric"));
+                            Assert.That(reader.GetFieldType(i), Is.EqualTo(typeof(decimal)));
+                            Assert.That(reader.GetDataTypeName(i), Is.EqualTo("numeric"));
                         }
                     }
                 }
@@ -411,14 +412,14 @@ namespace Npgsql.Tests.Types
             {
                 switch (dbType)
                 {
-                case NpgsqlDbType.Smallint:
-                    return "int2";
-                case NpgsqlDbType.Integer:
-                    return "int4";
-                case NpgsqlDbType.Bigint:
-                    return "int8";
-                default:
-                    throw new NotSupportedException();
+                    case NpgsqlDbType.Smallint:
+                        return "int2";
+                    case NpgsqlDbType.Integer:
+                        return "int4";
+                    case NpgsqlDbType.Bigint:
+                        return "int8";
+                    default:
+                        throw new NotSupportedException();
                 }
             }
 
@@ -436,16 +437,16 @@ namespace Npgsql.Tests.Types
             }
         }
 
-    // Older tests
+        // Older tests
 
-    [Test]
+        [Test]
         public void DoubleWithoutPrepared()
         {
             using (var conn = OpenConnection())
             using (var command = new NpgsqlCommand("select :field_float8", conn))
             {
                 command.Parameters.Add(new NpgsqlParameter(":field_float8", NpgsqlDbType.Double));
-                var x = 1d/7d;
+                var x = 1d / 7d;
                 command.Parameters[0].Value = x;
                 var valueReturned = command.ExecuteScalar();
                 Assert.That(valueReturned, Is.EqualTo(x).Within(100).Ulps);
