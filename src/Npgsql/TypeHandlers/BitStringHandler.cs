@@ -271,7 +271,7 @@ namespace Npgsql.TypeHandlers
     /// </summary>
     class BitStringArrayHandler : ArrayHandler<BitArray>
     {
-        ValueTypeArrayHandler<bool> boolHandler;
+        readonly ValueTypeArrayHandler<bool> _boolHandler;
 
         internal override Type GetElementFieldType(FieldDescription fieldDescription = null)
             => fieldDescription?.TypeModifier == 1 ? typeof(bool) : typeof(BitArray);
@@ -282,7 +282,7 @@ namespace Npgsql.TypeHandlers
         public BitStringArrayHandler(BitStringHandler elementHandler)
             : base(elementHandler)
         {
-            boolHandler = new ValueTypeArrayHandler<bool>(elementHandler);
+            _boolHandler = new ValueTypeArrayHandler<bool>(elementHandler);
         }
 
         protected internal override async ValueTask<TArray> Read<TArray>(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription = null)
@@ -293,14 +293,14 @@ namespace Npgsql.TypeHandlers
             var elementType = t.GetElementType();
             if (elementType == typeof(BitArray))
                 return (TArray)(object)await Read(buf, async);
-            if (elementType == typeof(bool))
-                return (TArray)(object)await boolHandler.Read(buf, async);
+            if (elementType == typeof(bool) || Nullable.GetUnderlyingType(elementType) == typeof(bool))
+                return (TArray)(object)await _boolHandler.Read(buf, async);
             throw new InvalidCastException($"Can't cast database type {PgDisplayName} to {typeof(TArray).Name}");
         }
 
         internal override async ValueTask<object> ReadAsObject(NpgsqlReadBuffer buf, int len, bool async, FieldDescription fieldDescription)
             => fieldDescription?.TypeModifier == 1
-                ? await boolHandler.Read(buf, async)
+                ? await _boolHandler.Read(buf, async)
                 : await Read(buf, async);
     }
 }

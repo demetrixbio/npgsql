@@ -25,6 +25,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
@@ -504,33 +505,33 @@ namespace Npgsql.Tests.Types
 
 
         private static object[][] OneDimensionalArrayWithNullValues_Tests = new[] {
-            new object[] { "bool", typeof(bool?[]), null, new Type[] { }, new Type[] { typeof(bool?[]) }, new bool?[] { false, true, null } },
-            new object[] { "int2", typeof(short?[]), null, new Type[] { }, new Type[] { typeof(short?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "int4", typeof(int?[]), null, new Type[] { }, new Type[] { typeof(int?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "int8", typeof(long?[]), null, new Type[] { }, new Type[] { typeof(long?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "float4", typeof(float?[]), null, new Type[] { }, new Type[] { typeof(float?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "float8", typeof(double?[]), null, new Type[] { }, new Type[] { typeof(double?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "numeric", typeof(decimal?[]), null, new Type[] { }, new Type[] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "money", typeof(decimal?[]), null, new Type[] { }, new Type[] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
-            new object[] { "text", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
-            new object[] { "varchar", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
-            new object[] { "char", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
-            new object[] { "citext", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "A", "B", null } },
-            new object[] { "json", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "0", "1", null } },
-            new object[] { "jsonb", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "0", "1", null } },
-            new object[] { "xml", typeof(string[]), null, new Type[] { }, new Type[] { typeof(string[]) }, new [] { "<foo>bar</foo>", "<bar>foo</bar>", null } },
-            new object[] { "point", typeof(NpgsqlPoint?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPoint?[]) }, new NpgsqlPoint?[] { new NpgsqlPoint(0,0), new NpgsqlPoint(1,1), null } },
-            new object[] { "lseg", typeof(NpgsqlLSeg?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlLSeg?[]) }, new NpgsqlLSeg?[] { new NpgsqlLSeg(0d,0d,1d,1d), new NpgsqlLSeg(2d,2d,3d,3d), null } },
-            new object[] { "path", typeof(NpgsqlPath?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPath?[]) }, new NpgsqlPath?[] { new NpgsqlPath(new NpgsqlPoint(0,0), new NpgsqlPoint(1,1)), new NpgsqlPath(new NpgsqlPoint(2,2), new NpgsqlPoint(3,3)), null } },
+            new object[] { "bool", typeof(bool?[]), null, new Type[] { }, new [] { typeof(bool?[]) }, new bool?[] { false, true, null } },
+            new object[] { "int2", typeof(short?[]), null, new Type[] { }, new [] { typeof(short?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "int4", typeof(int?[]), null, new Type[] { }, new [] { typeof(int?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "int8", typeof(long?[]), null, new Type[] { }, new [] { typeof(long?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "float4", typeof(float?[]), null, new Type[] { }, new [] { typeof(float?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "float8", typeof(double?[]), null, new Type[] { }, new [] { typeof(double?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "numeric", typeof(decimal?[]), null, new Type[] { }, new [] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "money", typeof(decimal?[]), null, new Type[] { }, new [] { typeof(decimal?[]) }, new int?[] { 0, 1, null } },
+            new object[] { "text", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "varchar", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "char", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "citext", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "A", "B", null } },
+            new object[] { "json", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "0", "1", null } },
+            new object[] { "jsonb", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "0", "1", null } },
+            new object[] { "xml", typeof(string[]), null, new Type[] { }, new [] { typeof(string[]) }, new [] { "<foo>bar</foo>", "<bar>foo</bar>", null } },
+            new object[] { "point", typeof(NpgsqlPoint?[]), null, new Type[] { }, new [] { typeof(NpgsqlPoint?[]) }, new NpgsqlPoint?[] { new NpgsqlPoint(0,0), new NpgsqlPoint(1,1), null } },
+            new object[] { "lseg", typeof(NpgsqlLSeg?[]), null, new Type[] { }, new [] { typeof(NpgsqlLSeg?[]) }, new NpgsqlLSeg?[] { new NpgsqlLSeg(0d,0d,1d,1d), new NpgsqlLSeg(2d,2d,3d,3d), null } },
+            new object[] { "path", typeof(NpgsqlPath?[]), null, new Type[] { }, new [] { typeof(NpgsqlPath?[]) }, new NpgsqlPath?[] { new NpgsqlPath(new NpgsqlPoint(0,0), new NpgsqlPoint(1,1)), new NpgsqlPath(new NpgsqlPoint(2,2), new NpgsqlPoint(3,3)), null } },
             new object[] { "polygon", typeof(NpgsqlPolygon?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlPolygon?[]) }, new NpgsqlPolygon?[] { new NpgsqlPolygon(new NpgsqlPoint(0,0), new NpgsqlPoint(1,1)), new NpgsqlPolygon(new NpgsqlPoint(2,2), new NpgsqlPoint(3,3)), null } },
             new object[] { "line", typeof(NpgsqlLine?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlLine?[]) }, new NpgsqlLine?[] { new NpgsqlLine(0d,1d,2d), new NpgsqlLine(3d,4d,5d), null } },
             new object[] { "circle", typeof(NpgsqlCircle?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlCircle?[]) }, new NpgsqlCircle?[] { new NpgsqlCircle(0d,0d,1d), new NpgsqlCircle(2d,2d,3d), null } },
-            new object[] { "box", typeof(NpgsqlBox?[]), null, new Type[] { }, new Type[] { typeof(NpgsqlBox?[]) }, new NpgsqlBox?[] { new NpgsqlBox(3d,2d,1d,0d), new NpgsqlBox(7d,6d,5d,4d), null } },
-            new object[] { "varbit", typeof(BitArray[]), null, new Type[] { }, new Type[] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
-            new object[] { "bit(2)", typeof(BitArray[]), null, new Type[] { }, new Type[] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
-            //new object[] { "bit", typeof(bool[]), null, new Type[] { typeof(BitArray[]) }, new Type[] { typeof(BitArray[]), typeof(bool[]), typeof(string[]) }, new [] { false, true } },
-            new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { }, new Type[] { typeof(IDictionary<string, string>[]) }, new [] { new Dictionary<string, string> { { "foo", "bar" } }, new Dictionary<string, string> { { "bar", "foo" } }, null } },
-            new object[] { "uuid", typeof(Guid?[]), null, new Type[] { }, new Type[] { typeof(Guid?[]) }, new Guid?[] { Guid.NewGuid(), Guid.NewGuid(), null } },
+            new object[] { "box", typeof(NpgsqlBox?[]), null, new Type[] { }, new [] { typeof(NpgsqlBox?[]) }, new NpgsqlBox?[] { new NpgsqlBox(3d,2d,1d,0d), new NpgsqlBox(7d,6d,5d,4d), null } },
+            new object[] { "varbit", typeof(BitArray[]), null, new Type[] { }, new [] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
+            new object[] { "bit(2)", typeof(BitArray[]), null, new Type[] { }, new [] { typeof(BitArray[]) }, new bool[][] { new[] { false, true }, new[] { false, true }, null } },
+            new object[] { "bit", typeof(bool?[]), null, new Type[] { }, new [] { typeof(bool?[]) }, new bool?[] { false, true, null } },
+            new object[] { "hstore", typeof(IDictionary<string, string>[]), null, new Type[] { }, new [] { typeof(IDictionary<string, string>[]) }, new [] { new Dictionary<string, string> { { "foo", "bar" } }, new Dictionary<string, string> { { "bar", "foo" } }, null } },
+            new object[] { "uuid", typeof(Guid?[]), null, new Type[] { }, new [] { typeof(Guid?[]) }, new Guid?[] { Guid.NewGuid(), Guid.NewGuid(), null } },
             //new object[] { "cidr", typeof(NpgsqlInet[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(IPAddress[]), typeof(NpgsqlInet[]) }, new [] { false, true } },
             //new object[] { "inet", typeof(IPAddress[]), typeof(NpgsqlInet), new Type[] { typeof(string[]) }, new Type[] { typeof(IPAddress[]), typeof(NpgsqlInet[]) }, new [] { false, true } },
             //new object[] { "macaddr", typeof(PhysicalAddress[]), null, new Type[] { typeof(string[]) }, new Type[] { typeof(PhysicalAddress[]) }, new [] { false, true } },
@@ -553,7 +554,7 @@ namespace Npgsql.Tests.Types
         };
 
         [Test, Explicit("Testing of all possible data types is quite extensive"), Description("Roundtrips a one dimensional array that contains null values")]
-        [TestCaseSource("OneDimensionalArrayWithNullValues_Tests")]
+        [TestCaseSource(nameof(OneDimensionalArrayWithNullValues_Tests))]
         public void OneDimensionalArrayWithNullValues(string postgreSQLType, Type defaultType, Type providerSpecificType, Type[] otherOutputTypes, Type[] inputTypes, Array input)
         {
             Type[] allTypes = (new Type[] { defaultType }).Concat(otherOutputTypes).ToArray();
@@ -572,7 +573,10 @@ namespace Npgsql.Tests.Types
 
                     // in the following we test if inferring the data type from the .Net type works
                     // which it doesn't for some types by design
-                    if( !(postgreSQLType == "json" || postgreSQLType == "jsonb" || postgreSQLType == "xml")
+                    if( !(postgreSQLType == "json"
+                          || postgreSQLType == "jsonb"
+                          || postgreSQLType == "xml"
+                          || postgreSQLType == "bit")
                         &&
                         t == defaultType || Nullable.GetUnderlyingType(t.GetElementType()) == defaultElementType)
                     {
@@ -670,53 +674,53 @@ namespace Npgsql.Tests.Types
             if (targetType == typeof(byte?))
                 return source.ConvertAllMultidimensional<object, byte?>(e => e == null ? (byte?)null : Convert.ToByte(e));
             if (targetType == typeof(char))
-                return source.ConvertAllMultidimensional<IConvertible, char>(e => Convert.ToChar(e));
+                return source.ConvertAllMultidimensional<IConvertible, char>(Convert.ToChar);
             if (targetType == typeof(char?))
                 return source.ConvertAllMultidimensional<object, char?>(e => e == null ? (char?)null : Convert.ToChar(e));
             if (targetType == typeof(DateTime))
-                return source.ConvertAllMultidimensional<IConvertible, DateTime>(e => Convert.ToDateTime(e));
+                return source.ConvertAllMultidimensional<IConvertible, DateTime>(Convert.ToDateTime);
             if (targetType == typeof(DateTime?))
                 return source.ConvertAllMultidimensional<object, DateTime?>(e => e == null ? (DateTime?)null : Convert.ToDateTime(e));
             if (targetType == typeof(decimal))
-                return source.ConvertAllMultidimensional<IConvertible, decimal>(e => Convert.ToDecimal(e));
+                return source.ConvertAllMultidimensional<IConvertible, decimal>(Convert.ToDecimal);
             if (targetType == typeof(decimal?))
                 return source.ConvertAllMultidimensional<object, decimal?>(e => e == null ? (decimal?)null : Convert.ToDecimal(e));
             if (targetType == typeof(double))
-                return source.ConvertAllMultidimensional<IConvertible, double>(e => Convert.ToDouble(e));
+                return source.ConvertAllMultidimensional<IConvertible, double>(Convert.ToDouble);
             if (targetType == typeof(double?))
                 return source.ConvertAllMultidimensional<object, double?>(e => e == null ? (double?)null : Convert.ToDouble(e));
             if (targetType == typeof(short))
-                return source.ConvertAllMultidimensional<IConvertible, short>(e => Convert.ToInt16(e));
+                return source.ConvertAllMultidimensional<IConvertible, short>(Convert.ToInt16);
             if (targetType == typeof(short?))
                 return source.ConvertAllMultidimensional<object, short?>(e => e == null ? (short?)null : Convert.ToInt16(e));
             if (targetType == typeof(int))
-                return source.ConvertAllMultidimensional<IConvertible, int>(e => Convert.ToInt32(e));
+                return source.ConvertAllMultidimensional<IConvertible, int>(Convert.ToInt32);
             if (targetType == typeof(int?))
                 return source.ConvertAllMultidimensional<object, int?>(e => e == null ? (int?)null : Convert.ToInt32(e));
             if (targetType == typeof(long))
-                return source.ConvertAllMultidimensional<IConvertible, long>(e => Convert.ToInt64(e));
+                return source.ConvertAllMultidimensional<IConvertible, long>(Convert.ToInt64);
             if (targetType == typeof(long?))
                 return source.ConvertAllMultidimensional<object, long?>(e => e == null ? (long?)null : Convert.ToInt64(e));
             if (targetType == typeof(sbyte))
-                return source.ConvertAllMultidimensional<IConvertible, sbyte>(e => Convert.ToSByte(e));
+                return source.ConvertAllMultidimensional<IConvertible, sbyte>(Convert.ToSByte);
             if (targetType == typeof(sbyte?))
                 return source.ConvertAllMultidimensional<object, sbyte?>(e => e == null ? (sbyte?)null : Convert.ToSByte(e));
             if (targetType == typeof(float))
-                return source.ConvertAllMultidimensional<IConvertible, float>(e => Convert.ToSingle(e));
+                return source.ConvertAllMultidimensional<IConvertible, float>(Convert.ToSingle);
             if (targetType == typeof(float?))
                 return source.ConvertAllMultidimensional<object, float?>(e => e == null ? (float?)null : Convert.ToSingle(e));
             if (targetType == typeof(string))
                 return source.ConvertAllMultidimensional<object, string>(e => e == null ? null : Convert.ToString(e));
             if (targetType == typeof(ushort))
-                return source.ConvertAllMultidimensional<IConvertible, ushort>(e => Convert.ToUInt16(e));
+                return source.ConvertAllMultidimensional<IConvertible, ushort>(Convert.ToUInt16);
             if (targetType == typeof(ushort?))
                 return source.ConvertAllMultidimensional<object, ushort?>(e => e == null ? (ushort?)null : Convert.ToUInt16(e));
             if (targetType == typeof(uint))
-                return source.ConvertAllMultidimensional<IConvertible, uint>(e => Convert.ToUInt32(e));
+                return source.ConvertAllMultidimensional<IConvertible, uint>(Convert.ToUInt32);
             if (targetType == typeof(uint?))
                 return source.ConvertAllMultidimensional<object, uint?>(e => e == null ? (uint?)null : Convert.ToUInt32(e));
             if (targetType == typeof(ulong))
-                return source.ConvertAllMultidimensional<IConvertible, ulong>(e => Convert.ToUInt64(e));
+                return source.ConvertAllMultidimensional<IConvertible, ulong>(Convert.ToUInt64);
             if (targetType == typeof(ulong?))
                 return source.ConvertAllMultidimensional<object, ulong?>(e => e == null ? (ulong?)null : Convert.ToUInt64(e));
 
@@ -724,7 +728,7 @@ namespace Npgsql.Tests.Types
             // that supports IConvertible (preferrably string bit if it's a string we convert it to char[])
             if (source.GetType().GetElementType() == typeof(string))
                 return source.ConvertAllMultidimensional<string, char[]>(e => e.ToCharArray());
-            return source.ConvertAllMultidimensional<IConvertible, string>(e => e.ToString());
+            return source.ConvertAllMultidimensional<IConvertible, string>(e => e.ToString(CultureInfo.InvariantCulture));
         }
     }
 }
